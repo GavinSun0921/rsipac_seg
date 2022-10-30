@@ -41,6 +41,7 @@ def trainNet(net, criterion, opt, epochs, batch_size, amp, loss_scale_manager):
         source=dataset_train_buffer,
         column_names=['data', 'label'],
         shuffle=True,
+        python_multiprocessing=False,
         num_parallel_workers=num_parallel_workers,
         max_rowsize=16
     )
@@ -54,6 +55,7 @@ def trainNet(net, criterion, opt, epochs, batch_size, amp, loss_scale_manager):
         source=dataset_valid_buffer,
         column_names=['data', 'label'],
         shuffle=False,
+        python_multiprocessing=False,
         num_parallel_workers=num_parallel_workers,
         max_rowsize=16
     )
