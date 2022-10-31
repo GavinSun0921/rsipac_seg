@@ -130,8 +130,8 @@ def trainNet(net, criterion, opt, epochs, batch_size, amp, loss_scale_manager):
                             dir_buffer = f'./valid_buffer/{epoch}'
                             if not os.path.exists(dir_buffer):
                                 os.mkdir(dir_buffer)
-                            cv2.imwrite(f'{dir_buffer}/pred_{idx}_{i}.png', visual_pred * 255)
-                            cv2.imwrite(f'{dir_buffer}/mask_{idx}_{i}.png', visual_mask * 255)
+                            cv2.imwrite(f'{dir_buffer}/{idx}_{i}_pred.png', visual_pred * 255)
+                            cv2.imwrite(f'{dir_buffer}/{idx}_{i}_mask.png', visual_mask * 255)
 
                     iou_score = calc_iou(mask_buffer, pred_buffer)
                     valid_avg_iou += iou_score / valid_steps
