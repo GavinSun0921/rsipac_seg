@@ -97,16 +97,16 @@ def trainNet(net, criterion, opt, epochs, batch_size, amp, loss_scale_manager):
     for epoch in range(1, epochs + 1):
         # train
         train_avg_loss = 0
-        # with tqdm(total=train_steps, desc=f'Epoch {epoch}/{epochs}', unit='batch') as train_pbar:
-        #     for step, (imgs, masks) in enumerate(dataloader_train):
-        #         if amp:
-        #             train_loss, _, _ = train_model(imgs, masks)
-        #         else:
-        #             train_loss = train_model(imgs, masks)
-        #         train_avg_loss += train_loss.asnumpy() / train_steps
-        #
-        #         train_pbar.update(1)
-        #         train_pbar.set_postfix(**{'loss (batch)': train_loss.asnumpy()})
+        with tqdm(total=train_steps, desc=f'Epoch {epoch}/{epochs}', unit='batch') as train_pbar:
+            for step, (imgs, masks) in enumerate(dataloader_train):
+                if amp:
+                    train_loss, _, _ = train_model(imgs, masks)
+                else:
+                    train_loss = train_model(imgs, masks)
+                train_avg_loss += train_loss.asnumpy() / train_steps
+
+                train_pbar.update(1)
+                train_pbar.set_postfix(**{'loss (batch)': train_loss.asnumpy()})
 
         # eval
         if eval_per_epoch == 0 or epoch % eval_per_epoch == 0:
