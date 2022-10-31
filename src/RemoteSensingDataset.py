@@ -88,13 +88,13 @@ class RSDataset:
                 image = cv2.imread(image_path, cv2.IMREAD_COLOR)
                 label = cv2.imread(label_path, cv2.IMREAD_GRAYSCALE)
                 image, label = self.generate(image, label)
-                return image, label
+                return image.copy(), label.copy()
             else:
                 image_path, image_name = self.img_list[item]
                 image = cv2.imread(image_path, cv2.IMREAD_COLOR)
                 h, w, c = image.shape
                 image = self.generate(image)
-                return image, (h, w), image_name
+                return image.copy(), (h, w), image_name
         else:
             raise StopIteration
 

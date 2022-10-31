@@ -82,10 +82,8 @@ def trainNet(net, criterion, opt, epochs, batch_size):
     net_with_loss = nn.WithLossCell(backbone=net, loss_fn=criterion)
 
     train_model = nn.TrainOneStepCell(network=net_with_loss, optimizer=opt)
-    train_model.set_train(True)
 
     eval_model = nn.WithEvalCell(network=net, loss_fn=criterion)
-    eval_model.set_train(False)
 
     logger.info(f'Begin training:')
 
@@ -93,6 +91,7 @@ def trainNet(net, criterion, opt, epochs, batch_size):
     best_valid_iou = None
     for epoch in range(1, epochs + 1):
         # train
+        train_model.set_train(True)
         train_avg_loss = 0
         with tqdm(total=train_steps, desc=f'Epoch {epoch}/{epochs}', unit='batch') as train_pbar:
             for step, (imgs, masks) in enumerate(dataloader_train):
@@ -103,6 +102,7 @@ def trainNet(net, criterion, opt, epochs, batch_size):
                 train_pbar.set_postfix(**{'loss (batch)': train_loss.asnumpy()})
 
         # eval
+        eval_model.set_train(False)
         if eval_per_epoch == 0 or epoch % eval_per_epoch == 0:
             valid_avg_loss = 0
             valid_avg_iou = 0
