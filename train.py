@@ -18,6 +18,7 @@ visual_flag = False
 
 net_name = 'seresnext50_unet'
 
+figsize = 640
 dir_root = './datas'
 dir_weights = './weights'
 dir_log = './logs'
@@ -35,8 +36,8 @@ def calc_iou(target, prediction):
     return iou_score * 100
 
 
-def trainNet(net, criterion, opt, epochs, batch_size, amp, loss_scale_manager):
-    dataset_train_buffer = RSDataset(root=dir_root, mode=Mode.train, multi_scale=True,
+def trainNet(net, criterion, opt, epochs, batch_size):
+    dataset_train_buffer = RSDataset(root=dir_root, mode=Mode.train, fig_size=figsize,
                                      mean=mean, std=std)
     dataset_train = ds.GeneratorDataset(
         source=dataset_train_buffer,
@@ -50,7 +51,7 @@ def trainNet(net, criterion, opt, epochs, batch_size, amp, loss_scale_manager):
     train_steps = dataset_train.get_dataset_size()
     dataloader_train = dataset_train.create_tuple_iterator(num_epochs=epochs)
 
-    dataset_valid_buffer = RSDataset(root=dir_root, mode=Mode.valid, multi_scale=True,
+    dataset_valid_buffer = RSDataset(root=dir_root, mode=Mode.valid, fig_size=figsize,
                                      mean=mean, std=std)
     dataset_valid = ds.GeneratorDataset(
         source=dataset_valid_buffer,
@@ -79,11 +80,6 @@ def trainNet(net, criterion, opt, epochs, batch_size, amp, loss_scale_manager):
 
     net_with_loss = nn.WithLossCell(backbone=net, loss_fn=criterion)
 
-    # if amp:
-    #     train_model = nn.TrainOneStepWithLossScaleCell(network=net_with_loss, optimizer=opt,
-    #                                                    scale_sense=loss_scale_manager)
-    # else:
-    #     train_model = nn.TrainOneStepCell(network=net_with_loss, optimizer=opt)
     train_model = nn.TrainOneStepCell(network=net_with_loss, optimizer=opt)
     train_model.set_train(True)
 
@@ -99,10 +95,6 @@ def trainNet(net, criterion, opt, epochs, batch_size, amp, loss_scale_manager):
         train_avg_loss = 0
         with tqdm(total=train_steps, desc=f'Epoch {epoch}/{epochs}', unit='batch') as train_pbar:
             for step, (imgs, masks) in enumerate(dataloader_train):
-                # if amp:
-                #     train_loss, _, _ = train_model(imgs, masks)
-                # else:
-                #     train_loss = train_model(imgs, masks)
                 train_loss = train_model(imgs, masks)
                 train_avg_loss += train_loss.asnumpy() / train_steps
 
@@ -119,7 +111,7 @@ def trainNet(net, criterion, opt, epochs, batch_size, amp, loss_scale_manager):
                         valid_loss, (preds, _), masks = eval_model(imgs, masks)
                     else:
                         valid_loss, preds, masks = eval_model(imgs, masks)
-                    pred_buffer = preds.squeeze(1).asnumpy()
+                    pred_buffer = preds.squeeze(1).asnumpy().copy()
                     pred_buffer[pred_buffer >= 0.5] = 1
                     pred_buffer[pred_buffer < 0.5] = 0
                     mask_buffer = masks.asnumpy()
@@ -171,10 +163,9 @@ def get_args():
     parser.add_argument('--clfhead', default=False, type=ast.literal_eval)
     parser.add_argument('--clf_threshold', default=None, type=float)
     parser.add_argument('--load_pretrained', default=True, type=ast.literal_eval)
-    parser.add_argument('--amp', default=False, action='store_true', help='Using amp.')
     parser.add_argument('--num_parallel_workers', default=50, type=int)
     parser.add_argument('--eval_per_epoch', default=0, type=int)
-    parser.add_argument('--visual', default=False, action='store_true', help='Using amp.')
+    parser.add_argument('--visual', default=False, action='store_true', help='Visual at eval.')
 
     return parser.parse_args()
 
@@ -210,8 +201,11 @@ if __name__ == '__main__':
     if args.eval_per_epoch:
         eval_per_epoch = args.eval_per_epoch
 
+    if args.figsize:
+        figsize = args.figsize
+
     _net = seresnext50_unet(
-        resolution=(args.figsize, args.figsize),
+        resolution=(figsize, figsize),
         deepsupervision=args.deepsupervision,
         clfhead=args.clfhead,
         clf_threshold=args.clf_threshold,
@@ -221,13 +215,7 @@ if __name__ == '__main__':
     _criterion = Criterion(deepsupervision=args.deepsupervision, clfhead=args.clfhead)
 
     params = _net.trainable_params()
-    print(params)
     _opt = nn.Adam(params=params)
-
-    _loss_scale_manager = nn.DynamicLossScaleUpdateCell(
-        loss_scale_value=2 ** 12, scale_factor=2, scale_window=1000
-    ) if args.amp else None
-    amp_level = 'O2' if args.amp else 'O0'
 
     if args.visual:
         visual_flag = True
@@ -249,7 +237,6 @@ if __name__ == '__main__':
         epochs          : {args.epochs}
         batch_size      : {args.batch_size}
         device          : {args.device_target}
-        amp             : {'Enabled' if args.amp else 'Disabled'}
         visual in eval  : {'Enabled' if visual_flag else 'Disabled'}
 =============================================================================
     ''')
@@ -260,9 +247,7 @@ if __name__ == '__main__':
             criterion=_criterion,
             opt=_opt,
             epochs=args.epochs,
-            batch_size=args.batch_size,
-            amp=args.amp,
-            loss_scale_manager=_loss_scale_manager
+            batch_size=args.batch_size
         )
     except InterruptedError:
         logger.error('Interrupted')
