@@ -2,12 +2,24 @@ from mindspore import nn
 from mindspore.common import dtype
 
 
+class BCE_DICE_LOSS(nn.LossBase):
+    def __init__(self):
+        super(BCE_DICE_LOSS, self).__init__()
+        self.c1 = nn.BCELoss(reduction='mean')
+        self.c2 = nn.DiceLoss()
+
+    def construct(self, logits, labels):
+        loss1 = self.c1(logits, labels)
+        loss2 = self.c2(logits, labels)
+        return loss1 + loss2
+
+
 class Criterion(nn.LossBase):
-    def __init__(self, deepsupervision, clfhead, criterion: nn.LossBase = None):
+    def __init__(self, deepsupervision, clfhead):
         super(Criterion, self).__init__()
         self.deepsupervision = deepsupervision
         self.clfhead = clfhead
-        self.criterion = criterion if criterion else nn.BCELoss()
+        self.criterion = BCE_DICE_LOSS()
 
     def construct(self, logits, labels):
         labels = labels.astype(dtype=dtype.float32)
