@@ -29,9 +29,6 @@ std = [0.229, 0.224, 0.225]
 
 
 def calc_iou(target, prediction):
-    backup = prediction
-    prediction[backup >= 0.5] = 1
-    prediction[backup < 0.5] = 0
     intersection = np.logical_and(target, prediction)
     union = np.logical_or(target, prediction)
     iou_score = np.sum(intersection) / np.sum(union)
@@ -122,6 +119,8 @@ def trainNet(net, criterion, opt, epochs, batch_size, amp, loss_scale_manager):
                     else:
                         valid_loss, preds, masks = eval_model(imgs, masks)
                     pred_buffer = preds.squeeze(1).asnumpy()
+                    pred_buffer[pred_buffer >= 0.5] = 1
+                    pred_buffer[pred_buffer < 0.5] = 0
                     mask_buffer = masks.asnumpy()
 
                     if visual_flag:
@@ -131,8 +130,8 @@ def trainNet(net, criterion, opt, epochs, batch_size, amp, loss_scale_manager):
                             dir_buffer = f'./valid_buffer/{epoch}'
                             if not os.path.exists(dir_buffer):
                                 os.mkdir(dir_buffer)
-                            cv2.imwrite(f'{dir_buffer}/pred_{idx}_{i}.png', visual_pred)
-                            cv2.imwrite(f'{dir_buffer}/mask_{idx}_{i}.png', visual_mask)
+                            cv2.imwrite(f'{dir_buffer}/pred_{idx}_{i}.png', visual_pred * 255)
+                            cv2.imwrite(f'{dir_buffer}/mask_{idx}_{i}.png', visual_mask * 255)
 
                     iou_score = calc_iou(mask_buffer, pred_buffer)
                     valid_avg_iou += iou_score / valid_steps
