@@ -1,3 +1,5 @@
+import os
+
 import cv2
 from enum import Enum
 
@@ -53,10 +55,11 @@ class RSDataset:
                 for filename in img_list
             ]
         elif mode == Mode.predict:
-            self.img_list = [
-                (f'{root}/images/{filename}', filename)
-                for filename in img_list
-            ]
+            # self.img_list = [
+            #     (f'{root}/images/{filename}', filename)
+            #     for filename in img_list
+            # ]
+            self.img_list = os.listdir(f'{root}/images')
 
         self._number = len(self.img_list)
 
