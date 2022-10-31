@@ -79,15 +79,15 @@ def trainNet(net, criterion, opt, epochs, batch_size, amp, loss_scale_manager):
 
     net_with_loss = nn.WithLossCell(backbone=net, loss_fn=criterion)
 
-    if amp:
-        train_model = nn.TrainOneStepWithLossScaleCell(network=net_with_loss, optimizer=opt,
-                                                       scale_sense=loss_scale_manager)
-    else:
-        train_model = nn.TrainOneStepCell(network=net_with_loss, optimizer=opt)
+    # if amp:
+    #     train_model = nn.TrainOneStepWithLossScaleCell(network=net_with_loss, optimizer=opt,
+    #                                                    scale_sense=loss_scale_manager)
+    # else:
+    #     train_model = nn.TrainOneStepCell(network=net_with_loss, optimizer=opt)
+    train_model = nn.TrainOneStepCell(network=net_with_loss, optimizer=opt)
+    train_model.set_train(True)
 
     eval_model = nn.WithEvalCell(network=net, loss_fn=criterion)
-
-    train_model.set_train(True)
     eval_model.set_train(False)
 
     logger.info(f'Begin training:')
@@ -99,10 +99,11 @@ def trainNet(net, criterion, opt, epochs, batch_size, amp, loss_scale_manager):
         train_avg_loss = 0
         with tqdm(total=train_steps, desc=f'Epoch {epoch}/{epochs}', unit='batch') as train_pbar:
             for step, (imgs, masks) in enumerate(dataloader_train):
-                if amp:
-                    train_loss, _, _ = train_model(imgs, masks)
-                else:
-                    train_loss = train_model(imgs, masks)
+                # if amp:
+                #     train_loss, _, _ = train_model(imgs, masks)
+                # else:
+                #     train_loss = train_model(imgs, masks)
+                train_loss = train_model(imgs, masks)
                 train_avg_loss += train_loss.asnumpy() / train_steps
 
                 train_pbar.update(1)
@@ -219,7 +220,9 @@ if __name__ == '__main__':
 
     _criterion = Criterion(deepsupervision=args.deepsupervision, clfhead=args.clfhead)
 
-    _opt = nn.Adam(params=_net.trainable_params())
+    params = _net.trainable_params()
+    print(params)
+    _opt = nn.Adam(params=params)
 
     _loss_scale_manager = nn.DynamicLossScaleUpdateCell(
         loss_scale_value=2 ** 12, scale_factor=2, scale_window=1000
