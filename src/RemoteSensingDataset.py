@@ -23,7 +23,7 @@ class RSDataset(BaseDataset):
             num_classes: int = 1,
             multi_scale: bool = False,
             flip: bool = False,
-            ignore_label=-1,
+            ignore_label=0,
             base_size=640,
             crop_size=(512, 512),
             downsample_rate=1,
