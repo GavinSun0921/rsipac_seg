@@ -127,8 +127,8 @@ def trainNet(net, criterion, opt, epochs, batch_size, amp, loss_scale_manager):
                         for i in range(pred_buffer.shape[0]):
                             visual_pred = pred_buffer[i, :, :].astype(np.uint8)
                             visual_mask = mask_buffer[i, :, :].astype(np.uint8)
-                            cv2.imwrite(f'./valid_buffer/pred_{epoch}_{idx}_{i}.png', visual_pred)
-                            cv2.imwrite(f'./valid_buffer/mask_{epoch}_{idx}_{i}.png', visual_mask)
+                            cv2.imwrite(f'./valid_buffer/{epoch}/pred_{idx}_{i}.png', visual_pred)
+                            cv2.imwrite(f'./valid_buffer/{epoch}/mask_{idx}_{i}.png', visual_mask)
 
                     iou_score = calc_iou(mask_buffer, pred_buffer)
                     valid_avg_iou += iou_score / valid_steps
