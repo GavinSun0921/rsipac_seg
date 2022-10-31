@@ -2,6 +2,7 @@ import argparse
 import ast
 import logging
 
+import cv2
 import numpy as np
 import mindspore as ms
 import mindspore.dataset as ds
@@ -11,6 +12,8 @@ from tqdm import tqdm
 from src.Criterion import Criterion
 from src.RemoteSensingDataset import RSDataset, Mode
 from src.se_resnext50 import seresnext50_unet
+
+visual_flag = False
 
 net_name = 'seresnext50_unet'
 
@@ -102,10 +105,10 @@ def trainNet(net, criterion, opt, epochs, batch_size, amp, loss_scale_manager):
                     train_loss, _, _ = train_model(imgs, masks)
                 else:
                     train_loss = train_model(imgs, masks)
-                train_avg_loss += np.mean(train_loss.asnumpy()) / train_steps
+                train_avg_loss += train_loss.asnumpy() / train_steps
 
                 train_pbar.update(1)
-                train_pbar.set_postfix(**{'loss (batch)': np.mean(train_loss.asnumpy())})
+                train_pbar.set_postfix(**{'loss (batch)': train_loss.asnumpy()})
 
         # eval
         if eval_per_epoch == 0 or epoch % eval_per_epoch == 0:
@@ -119,9 +122,17 @@ def trainNet(net, criterion, opt, epochs, batch_size, amp, loss_scale_manager):
                         valid_loss, preds, masks = eval_model(imgs, masks)
                     pred_buffer = preds.squeeze(1).asnumpy()
                     mask_buffer = masks.asnumpy()
+
+                    if visual_flag:
+                        for i in range(pred_buffer.shape[0]):
+                            visual_pred = pred_buffer[i, :, :].astype(np.uint8)
+                            visual_mask = mask_buffer[i, :, :].astype(np.uint8)
+                            cv2.imwrite(f'./valid_buffer/pred_{epoch}_{idx}_{i}.png', visual_pred)
+                            cv2.imwrite(f'./valid_buffer/mask_{epoch}_{idx}_{i}.png', visual_mask)
+
                     iou_score = calc_iou(mask_buffer, pred_buffer)
                     valid_avg_iou += iou_score / valid_steps
-                    valid_avg_loss += np.mean(valid_loss.asnumpy()) / valid_steps
+                    valid_avg_loss += valid_loss / valid_steps
 
                     eval_pbar.update(1)
                     eval_pbar.set_postfix(**{'IoU (batch)': iou_score})
@@ -159,6 +170,7 @@ def get_args():
     parser.add_argument('--amp', default=False, action='store_true', help='Using amp.')
     parser.add_argument('--num_parallel_workers', default=50, type=int)
     parser.add_argument('--eval_per_epoch', default=0, type=int)
+    parser.add_argument('--visual', default=False, action='store_true', help='Using amp.')
 
     return parser.parse_args()
 
@@ -211,6 +223,9 @@ if __name__ == '__main__':
     ) if args.amp else None
     amp_level = 'O2' if args.amp else 'O0'
 
+    if args.visual:
+        visual_flag = True
+
     logger.info(f'''
 ==================================INFO=======================================
     path config :
@@ -229,6 +244,7 @@ if __name__ == '__main__':
         batch_size      : {args.batch_size}
         device          : {args.device_target}
         amp             : {'Enabled' if args.amp else 'Disabled'}
+        visual in eval  : {'Enabled' if visual_flag else 'Disabled'}
 =============================================================================
     ''')
 
