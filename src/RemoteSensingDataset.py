@@ -35,7 +35,7 @@ class RSDataset:
         elif mode == Mode.valid:
             self.list_path = f'{root}/valid/valid_segemetation.txt'
         elif mode == Mode.predict:
-            self.list_path = f'../datas/testA/test_list.txt'
+            self.list_path = f'{root}/test_list.txt'
         else:
             raise ValueError('Mode error')
 
@@ -54,7 +54,7 @@ class RSDataset:
             ]
         elif mode == Mode.predict:
             self.img_list = [
-                (f'../datas/testA/images/{filename}', filename)
+                (f'{root}/images/{filename}', filename)
                 for filename in img_list
             ]
 
