@@ -18,11 +18,12 @@ visual_flag = False
 
 net_name = 'seresnext50_unet'
 
-figsize = 640
+figsize = 960
 dir_root = './datas'
 dir_weights = './weights'
 dir_log = './logs'
 prefix = net_name
+python_multiprocessing = True
 num_parallel_workers = 50
 eval_per_epoch = 0
 mean = [0.485, 0.456, 0.406]
@@ -43,7 +44,7 @@ def trainNet(net, criterion, opt, epochs, batch_size):
         source=dataset_train_buffer,
         column_names=['data', 'label'],
         shuffle=True,
-        python_multiprocessing=False,
+        python_multiprocessing=python_multiprocessing,
         num_parallel_workers=num_parallel_workers,
         max_rowsize=16
     )
@@ -57,7 +58,7 @@ def trainNet(net, criterion, opt, epochs, batch_size):
         source=dataset_valid_buffer,
         column_names=['data', 'label'],
         shuffle=False,
-        python_multiprocessing=False,
+        python_multiprocessing=python_multiprocessing,
         num_parallel_workers=num_parallel_workers,
         max_rowsize=16
     )
@@ -136,7 +137,7 @@ def trainNet(net, criterion, opt, epochs, batch_size):
             if best_valid_iou is None or best_valid_iou < valid_avg_iou:
                 best_valid_iou = valid_avg_iou
                 best_model_epoch = epoch
-                ms.save_checkpoint(train_model, f'{dir_weights}/{prefix}_best.ckpt')
+                ms.save_checkpoint(net, f'{dir_weights}/{prefix}_best.ckpt')
 
             logger.info(f'''
     In {epoch} epoch:
@@ -146,7 +147,7 @@ def trainNet(net, criterion, opt, epochs, batch_size):
             best model saved at {best_model_epoch} epoch.
             ''')
 
-        ms.save_checkpoint(train_model, f'{dir_weights}/{prefix}_last.ckpt')
+        ms.save_checkpoint(net, f'{dir_weights}/{prefix}_last.ckpt')
 
     logger.info('Training finished.')
 
@@ -165,6 +166,7 @@ def get_args():
     parser.add_argument('--load_pretrained', default=True, type=ast.literal_eval)
     parser.add_argument('--num_parallel_workers', default=50, type=int)
     parser.add_argument('--eval_per_epoch', default=0, type=int)
+    parser.add_argument('--close_python_multiprocessing', default=False, action='store_true')
     parser.add_argument('--visual', default=False, action='store_true', help='Visual at eval.')
 
     return parser.parse_args()
@@ -188,9 +190,7 @@ if __name__ == '__main__':
 
     args = get_args()
 
-    context.set_context(mode=context.GRAPH_MODE, device_target='CPU')
-    if args.device_target == 'Ascend' or args.device_target == 'GPU':
-        context.set_context(mode=context.GRAPH_MODE, device_target=args.device_target)
+    context.set_context(mode=context.GRAPH_MODE, device_target=args.device_target)
 
     if args.root:
         dir_root = args.root
@@ -215,7 +215,10 @@ if __name__ == '__main__':
     _criterion = Criterion(deepsupervision=args.deepsupervision, clfhead=args.clfhead)
 
     params = _net.trainable_params()
-    _opt = nn.Adam(params=params)
+    _opt = nn.Adam(params=params, learning_rate=1e-3)
+
+    if args.close_python_multiprocessing:
+        python_multiprocessing = False
 
     if args.visual:
         visual_flag = True
@@ -237,6 +240,7 @@ if __name__ == '__main__':
         epochs          : {args.epochs}
         batch_size      : {args.batch_size}
         device          : {args.device_target}
+        multiprocessing : {'Enabled' if python_multiprocessing else 'Disabled'}
         visual in eval  : {'Enabled' if visual_flag else 'Disabled'}
 =============================================================================
     ''')
