@@ -23,7 +23,7 @@ dir_root = './datas'
 dir_weight = './weights/seresnext50_unet_best.ckpt'
 dir_pred = './pred'
 dir_log = './logs'
-figsize = 2560
+figsize = 1920
 python_multiprocessing = True
 num_parallel_workers = 32
 mean = [0.485, 0.456, 0.406]
@@ -42,7 +42,7 @@ def predictNet(net):
     dataset_predict = dataset_predict.batch(1)
     predict_steps = dataset_predict.get_dataset_size()
     dataloader_predict = dataset_predict.create_tuple_iterator()
-    with tqdm(total=predict_steps, desc='Prediction', unit='img'):
+    with tqdm(total=predict_steps, desc='Prediction', unit='img') as pbar:
         for step, (img, original_shape, filename) in enumerate(dataloader_predict):
             original_shape = original_shape[0].asnumpy().tolist()
             filename = filename[0].asnumpy()
@@ -56,6 +56,8 @@ def predictNet(net):
             pred[pred < 0.5] = 0
             pred = pred.astype(np.uint8)
             cv2.imwrite(f'{dir_pred}/{maskname}', pred)
+
+            pbar.update(1)
 
 
 def get_args():
@@ -130,8 +132,9 @@ if __name__ == '__main__':
     logger.info(f'''
 =============================================================================
     path config :
-        data_root   : {dir_root}
-        dir_log     : {dir_log}     
+        data_root   : {dir_root}   
+        dir_pred    : {dir_pred}
+        dir_log     : {dir_log}  
 
     net : {net_name}
         deepsupervision     : {'Enabled' if args.deepsupervision else 'Disabled'}
