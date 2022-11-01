@@ -120,7 +120,7 @@ if __name__ == '__main__':
         load_pretrained=False
     )
 
-    if args.load_weight:
+    if args.load_weight is not None:
         dir_weight = args.load_weight
 
     if (not os.path.isfile(dir_weight)) and dir_weight.endswith('.ckpt'):
