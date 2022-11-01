@@ -45,8 +45,8 @@ def predictNet(net):
     with tqdm(total=predict_steps, desc='Prediction', unit='img'):
         for step, (img, original_shape, filename) in enumerate(dataloader_predict):
             original_shape = original_shape[0].asnumpy().tolist()
-            filename = filename[0].asnumpy().astype(str)
-            maskname = f'{filename.split(".")[0]}.png'
+            filename = filename[0].asnumpy()
+            maskname = f'{filename}.png'
 
             pred = net(img).asnumpy()
             pred = pred.transpose([2, 0, 1])
