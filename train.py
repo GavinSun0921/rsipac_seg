@@ -43,14 +43,14 @@ def trainNet(net, criterion, opt, epochs, batch_size):
     dataset_train = ds.GeneratorDataset(
         source=dataset_train_buffer,
         column_names=['data', 'label'],
-        shuffle=True,
+        shuffle=False,
         python_multiprocessing=python_multiprocessing,
         num_parallel_workers=num_parallel_workers,
         max_rowsize=16
     )
     dataset_train = dataset_train.batch(batch_size)
     train_steps = dataset_train.get_dataset_size()
-    dataloader_train = dataset_train.create_tuple_iterator(num_epochs=epochs)
+    dataloader_train = dataset_train.create_tuple_iterator()
 
     dataset_valid_buffer = RSDataset(root=dir_root, mode=Mode.valid, fig_size=figsize,
                                      mean=mean, std=std)
@@ -64,7 +64,7 @@ def trainNet(net, criterion, opt, epochs, batch_size):
     )
     dataset_valid = dataset_valid.batch(batch_size)
     valid_steps = dataset_valid.get_dataset_size()
-    dataloader_valid = dataset_valid.create_tuple_iterator(num_epochs=epochs)
+    dataloader_valid = dataset_valid.create_tuple_iterator()
 
     logger.info(f'''
 ==================================DATA=======================================
