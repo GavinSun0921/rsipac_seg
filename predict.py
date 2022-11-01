@@ -38,7 +38,7 @@ def predictNet(net):
         shuffle=False, num_parallel_workers=num_parallel_workers,
         python_multiprocessing=python_multiprocessing
     )
-    dataset_predict.batch(1)
+    dataset_predict = dataset_predict.batch(1)
     predict_steps = dataset_predict.get_dataset_size()
     dataloader_predict = dataset_predict.create_tuple_iterator()
     with tqdm(total=predict_steps, desc='Prediction', unit='img'):
