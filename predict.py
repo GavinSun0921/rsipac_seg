@@ -49,7 +49,7 @@ def predictNet(net):
             maskname = f'{filename}.png'
 
             pred = net(img).asnumpy()
-            pred = pred.transpose([2, 0, 1])
+            pred = pred[0, 0, :, :]
             pred = cv2.resize(pred, (original_shape[0], original_shape[1]))
 
             pred[pred >= 0.5] = 255
