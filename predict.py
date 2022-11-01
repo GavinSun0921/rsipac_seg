@@ -109,7 +109,7 @@ if __name__ == '__main__':
     if args.figsize:
         figsize = args.figsize
 
-    net = seresnext50_unet(
+    _net = seresnext50_unet(
         resolution=(figsize, figsize),
         deepsupervision=args.deepsupervision,
         clfhead=args.clfhead,
@@ -124,7 +124,7 @@ if __name__ == '__main__':
         raise ValueError('check out the path of weight file')
 
     param_dict = ms.load_checkpoint(dir_weight)
-    ms.load_param_into_net(net, param_dict)
+    ms.load_param_into_net(_net, param_dict)
 
     logger.info(f'''
 =============================================================================
@@ -145,6 +145,6 @@ if __name__ == '__main__':
     ''')
 
     try:
-        predictNet(net=net)
+        predictNet(net=_net)
     except InterruptedError:
         logger.error('Interrupted')

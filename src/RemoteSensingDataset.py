@@ -41,8 +41,9 @@ class RSDataset:
         else:
             raise ValueError('Mode error')
 
-        with open(self.list_path, mode='r') as file:
-            img_list = [line.strip() for line in file]
+        if mode != Mode.predict:
+            with open(self.list_path, mode='r') as file:
+                img_list = [line.strip() for line in file]
 
         if mode == Mode.train:
             self.img_list = [
