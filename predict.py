@@ -65,7 +65,7 @@ def get_args():
 
     parser.add_argument('--root', default='./datas', type=str)
     parser.add_argument('--device_target', default='Ascend', type=str)
-    parser.add_argument('--figsize', default=512, type=int)
+    parser.add_argument('--figsize', default=1920, type=int)
     parser.add_argument('--deepsupervision', default=True, type=ast.literal_eval)
     parser.add_argument('--clfhead', default=False, type=ast.literal_eval)
     parser.add_argument('--clf_threshold', default=None, type=float)
@@ -143,6 +143,7 @@ if __name__ == '__main__':
         weight              : {dir_weight}
 
     predict config :
+        figsize         : {figsize}
         device          : {args.device_target}
         multiprocessing : {'Enabled' if python_multiprocessing else 'Disabled'}
 =============================================================================
