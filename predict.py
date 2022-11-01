@@ -10,6 +10,7 @@ import mindspore as ms
 import mindspore.dataset as ds
 import numpy as np
 from mindspore import nn
+from mindspore.common import dtype
 from mindspore.dataset import context
 from tqdm import tqdm
 
@@ -47,6 +48,7 @@ def predictNet(net):
             filename = filename[0].asnumpy().astype(str)
             maskname = f'{filename.split(".")[0]}.png'
 
+            img = img.astype(dtype=dtype.float32)
             pred = net(img).asnumpy()
             pred = pred.transpose([2, 0, 1])
             pred = cv2.resize(pred, (original_shape[0], original_shape[1]))
