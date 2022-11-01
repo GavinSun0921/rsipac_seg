@@ -25,6 +25,7 @@ class RSDataset:
             mean=None,
             std=None
     ):
+        self._index = 0
         self.root = root
         self.mode = mode
         self.fig_size = fig_size
