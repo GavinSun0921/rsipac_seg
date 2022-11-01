@@ -50,7 +50,7 @@ def predictNet(net):
 
             pred = net(img).asnumpy()
             pred = pred[0, 0, :, :]
-            pred = cv2.resize(pred, (original_shape[0], original_shape[1]))
+            pred = cv2.resize(pred, (original_shape[1], original_shape[0]))
 
             pred[pred >= 0.5] = 255
             pred[pred < 0.5] = 0
