@@ -41,7 +41,9 @@ class RSDataset:
         else:
             raise ValueError('Mode error')
 
-        if mode != Mode.predict:
+        if mode == Mode.predict:
+            img_list = os.listdir(f'{root}/images')
+        else:
             with open(self.list_path, mode='r') as file:
                 img_list = [line.strip() for line in file]
 
@@ -56,11 +58,10 @@ class RSDataset:
                 for filename in img_list
             ]
         elif mode == Mode.predict:
-            # self.img_list = [
-            #     (f'{root}/images/{filename}', filename)
-            #     for filename in img_list
-            # ]
-            self.img_list = os.listdir(f'{root}/images')
+            self.img_list = [
+                (f'{root}/images/{filename}', filename)
+                for filename in img_list
+            ]
 
         self._number = len(self.img_list)
 
@@ -109,10 +110,10 @@ class RSDataset:
 if __name__ == '__main__':
     mean = [0.485, 0.456, 0.406]
     std = [0.229, 0.224, 0.225]
-    dataset_train_buffer = RSDataset(root='../datas', mode=Mode.train, fig_size=640,
+    dataset_train_buffer = RSDataset(root='../datas/train', mode=Mode.predict, fig_size=640,
                                      mean=mean, std=std)
 
-    _img, _mask = dataset_train_buffer[0]
+    _img, original_shape, _image_name = dataset_train_buffer[0]
+    print(original_shape, _image_name)
     cv2.imshow('img', _img.transpose([1, 2, 0]))
-    cv2.imshow('mask', _mask)
     cv2.waitKey()
