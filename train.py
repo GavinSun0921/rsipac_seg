@@ -43,7 +43,7 @@ def trainNet(net, criterion, opt, epochs, batch_size):
     dataset_train = ds.GeneratorDataset(
         source=dataset_train_buffer,
         column_names=['data', 'label'],
-        shuffle=False,
+        shuffle=True,
         python_multiprocessing=python_multiprocessing,
         num_parallel_workers=num_parallel_workers,
         max_rowsize=16

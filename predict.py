@@ -29,6 +29,8 @@ num_parallel_workers = 32
 mean = [0.485, 0.456, 0.406]
 std = [0.229, 0.224, 0.225]
 
+deepsupervision = False
+
 
 def predictNet(net):
     dataset_predict_buffer = RSDataset(root=dir_root, mode=Mode.predict, fig_size=figsize,
@@ -48,7 +50,12 @@ def predictNet(net):
             filename = filename[0].asnumpy()
             maskname = f'{filename}.png'
 
-            pred = net(img).asnumpy()
+            if deepsupervision:
+                pred, _ = net(img)
+            else:
+                pred = net(img)
+
+            pred = pred.asnumpy()
             pred = pred[0, 0, :, :]
             pred = cv2.resize(pred, (original_shape[1], original_shape[0]))
 
@@ -66,7 +73,7 @@ def get_args():
     parser.add_argument('--root', default='./datas', type=str)
     parser.add_argument('--device_target', default='Ascend', type=str)
     parser.add_argument('--figsize', default=1920, type=int)
-    parser.add_argument('--deepsupervision', default=True, type=ast.literal_eval)
+    parser.add_argument('--deepsupervision', default=False, type=ast.literal_eval)
     parser.add_argument('--clfhead', default=False, type=ast.literal_eval)
     parser.add_argument('--clf_threshold', default=None, type=float)
     parser.add_argument('--dir_pred', default='./pred', type=str)
@@ -106,6 +113,9 @@ if __name__ == '__main__':
     if args.num_parallel_workers:
         num_parallel_workers = args.num_parallel_workers
 
+    if args.deepsupervision:
+        deepsupervision = True
+
     if args.close_python_multiprocessing:
         python_multiprocessing = False
 
@@ -137,7 +147,7 @@ if __name__ == '__main__':
         dir_log     : {dir_log}  
 
     net : {net_name}
-        deepsupervision     : {'Enabled' if args.deepsupervision else 'Disabled'}
+        deepsupervision     : {'Enabled' if deepsupervision else 'Disabled'}
         clfhead             : {'Enabled' if args.clfhead else 'Disabled'}
         clf_threshold       : {args.clf_threshold if args.clf_threshold is not None else 'Disabled'}
         weight              : {dir_weight}
