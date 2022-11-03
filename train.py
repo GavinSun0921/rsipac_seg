@@ -18,6 +18,7 @@ visual_flag = False
 
 net_name = 'seresnext50_unet'
 
+base_size = 1080
 figsize = 960
 dir_root = './datas'
 dir_weights = './weights'
@@ -26,8 +27,6 @@ prefix = net_name
 python_multiprocessing = True
 num_parallel_workers = 50
 eval_per_epoch = 0
-mean = [0.485, 0.456, 0.406]
-std = [0.229, 0.224, 0.225]
 
 
 def calc_iou(target, prediction):
@@ -38,8 +37,9 @@ def calc_iou(target, prediction):
 
 
 def trainNet(net, criterion, opt, epochs, batch_size):
-    dataset_train_buffer = RSDataset(root=dir_root, mode=Mode.train, fig_size=figsize,
-                                     mean=mean, std=std)
+    dataset_train_buffer = RSDataset(root=dir_root, mode=Mode.train,
+                                     multiscale=True, scale=0.5,
+                                     base_size=base_size, crop_size=(figsize, figsize))
     dataset_train = ds.GeneratorDataset(
         source=dataset_train_buffer,
         column_names=['data', 'label'],
@@ -52,8 +52,9 @@ def trainNet(net, criterion, opt, epochs, batch_size):
     train_steps = dataset_train.get_dataset_size()
     dataloader_train = dataset_train.create_tuple_iterator()
 
-    dataset_valid_buffer = RSDataset(root=dir_root, mode=Mode.valid, fig_size=figsize,
-                                     mean=mean, std=std)
+    dataset_valid_buffer = RSDataset(root=dir_root, mode=Mode.valid,
+                                     multiscale=False,
+                                     crop_size=(figsize, figsize))
     dataset_valid = ds.GeneratorDataset(
         source=dataset_valid_buffer,
         column_names=['data', 'label'],

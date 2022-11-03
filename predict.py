@@ -26,15 +26,14 @@ dir_log = './logs'
 figsize = 1920
 python_multiprocessing = True
 num_parallel_workers = 32
-mean = [0.485, 0.456, 0.406]
-std = [0.229, 0.224, 0.225]
 
 deepsupervision = False
 
 
 def predictNet(net):
-    dataset_predict_buffer = RSDataset(root=dir_root, mode=Mode.predict, fig_size=figsize,
-                                       mean=mean, std=std)
+    dataset_predict_buffer = RSDataset(root=dir_root, mode=Mode.predict,
+                                       multiscale=False,
+                                       crop_size=(figsize, figsize))
     dataset_predict = ds.GeneratorDataset(
         source=dataset_predict_buffer,
         column_names=['data', 'original_shape', 'filename'],
