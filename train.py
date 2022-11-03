@@ -156,6 +156,7 @@ def trainNet(net, criterion, epochs, batch_size):
             train loss      : {train_avg_loss}
             validation loss : {valid_avg_loss}
             validation iou  : {valid_avg_iou}
+            best valid iou  : {best_valid_iou}
             best model saved at {best_model_epoch} epoch.
             ''')
 
