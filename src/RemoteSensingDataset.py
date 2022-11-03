@@ -47,7 +47,8 @@ class RSDataset:
         else:
             raise ValueError('Mode error')
 
-        img_list = [line.strip() for line in file]
+        with open(self.list_path, mode='r') as file:
+            img_list = [line.strip() for line in file]
         # if mode == Mode.predict:
         #     img_list = os.listdir(f'{root}/images')
         # else:
