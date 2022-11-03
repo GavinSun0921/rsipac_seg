@@ -114,7 +114,7 @@ class RSDataset:
                 image = cv2.imread(image_path, cv2.IMREAD_COLOR)
                 image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                 label = cv2.imread(label_path, cv2.IMREAD_GRAYSCALE)
-                label /= 255
+                label = label / 255
                 image, label = self.generate(image, label)
                 return image.copy(), label.copy()
             else:
@@ -132,9 +132,15 @@ class RSDataset:
 
 
 if __name__ == '__main__':
-    dataset_train_buffer = RSDataset(root='../datas/train', mode=Mode.predict, base_size=640)
+    dataset_train_buffer = RSDataset(root='../datas', mode=Mode.train,
+                                     multiscale=True, scale=0.5,
+                                     base_size=640, crop_size=(512, 512))
+    img, mask = dataset_train_buffer[0]
+    print(img.shape, mask.shape)
 
-    _img, original_shape, _image_name = dataset_train_buffer[0]
-    print(original_shape, _image_name)
-    cv2.imshow('img', _img.transpose([1, 2, 0]))
-    cv2.waitKey()
+    # dataset_train_buffer = RSDataset(root='../datas/train', mode=Mode.predict, base_size=640)
+    #
+    # _img, original_shape, _image_name = dataset_train_buffer[0]
+    # print(original_shape, _image_name)
+    # cv2.imshow('img', _img.transpose([1, 2, 0]))
+    # cv2.waitKey()
