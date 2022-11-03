@@ -96,11 +96,14 @@ class RSDataset:
 
     def generate(self, image, mask=None):
         if self.mode != Mode.predict:
-            image, mask = self.transform(image=image, mask=mask)
+            item = self.transform(image=image, mask=mask)
+            image = item['image']
+            mask = item['mask']
             image = image.transpose([2, 0, 1])
             return image, mask
         else:
-            image, resize_shape = self.transform(image=image)
+            item, resize_shape = self.transform(image=image)
+            image = item['image']
             image = image.transpose([2, 0, 1])
             return image, resize_shape
 
@@ -109,12 +112,15 @@ class RSDataset:
             if self.mode != Mode.predict:
                 image_path, label_path = self.img_list[item]
                 image = cv2.imread(image_path, cv2.IMREAD_COLOR)
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                 label = cv2.imread(label_path, cv2.IMREAD_GRAYSCALE)
+                label /= 255
                 image, label = self.generate(image, label)
                 return image.copy(), label.copy()
             else:
                 image_path, image_name = self.img_list[item]
                 image = cv2.imread(image_path, cv2.IMREAD_COLOR)
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                 h, w, c = image.shape
                 image, resize_shape = self.generate(image)
                 return image.copy(), resize_shape, (h, w), int(image_name.split('.')[0])
