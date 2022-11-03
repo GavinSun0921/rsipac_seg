@@ -36,7 +36,13 @@ def calc_iou(target, prediction):
     return iou_score * 100
 
 
-def trainNet(net, criterion, opt, epochs, batch_size):
+def cosine_lr(base_lr, decay_steps, total_steps):
+    for i in range(total_steps):
+        step_ = min(i, decay_steps)
+        yield base_lr * 0.5 * (1 + np.cos(np.pi * step_ / decay_steps))
+
+
+def trainNet(net, criterion, epochs, batch_size):
     dataset_train_buffer = RSDataset(root=dir_root, mode=Mode.train,
                                      multiscale=True, scale=0.5,
                                      base_size=base_size, crop_size=(figsize, figsize))
@@ -66,6 +72,10 @@ def trainNet(net, criterion, opt, epochs, batch_size):
     dataset_valid = dataset_valid.batch(batch_size)
     valid_steps = dataset_valid.get_dataset_size()
     dataloader_valid = dataset_valid.create_tuple_iterator()
+
+    lr_iter = cosine_lr(0.015, train_steps, train_steps)
+    params = net.trainable_params()
+    opt = nn.Adam(params=params, learning_rate=lr_iter)
 
     logger.info(f'''
 ==================================DATA=======================================
@@ -215,9 +225,6 @@ if __name__ == '__main__':
 
     _criterion = Criterion(deepsupervision=args.deepsupervision, clfhead=args.clfhead)
 
-    params = _net.trainable_params()
-    _opt = nn.Adam(params=params, learning_rate=1e-3)
-
     if args.close_python_multiprocessing:
         python_multiprocessing = False
 
@@ -250,7 +257,6 @@ if __name__ == '__main__':
         trainNet(
             net=_net,
             criterion=_criterion,
-            opt=_opt,
             epochs=args.epochs,
             batch_size=args.batch_size
         )
