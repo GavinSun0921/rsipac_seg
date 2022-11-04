@@ -29,6 +29,7 @@ class RSDataset:
         self.root = root
         self.mode = mode
         self.base_size = base_size
+        self.crop_size = crop_size
         self.mean = mean
         self.std = std
 
@@ -72,14 +73,14 @@ class RSDataset:
 
     def input_transform(self, image: np.ndarray):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image = cv2.resize(image, (self.base_size, self.base_size))
+        image = cv2.resize(image, self.crop_size)
         image = image / 255.0
         image -= self.mean
         image /= self.std
         return image.astype(np.float32)
 
     def label_transform(self, label):
-        label = cv2.resize(label, (self.base_size, self.base_size))
+        label = cv2.resize(label, self.crop_size)
         label = label / 255.0
         return label.astype(np.float32)
 
