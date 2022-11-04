@@ -22,7 +22,6 @@ class Criterion(nn.LossBase):
         self.criterion = BCE_DICE_LOSS()
 
     def construct(self, logits, labels):
-        labels = labels.astype(dtype=dtype.float32)
         if self.clfhead:
             raise ValueError('Disabled clfhead in this project.')
         else:

@@ -3,6 +3,8 @@ import os
 import cv2
 from enum import Enum
 
+import numpy as np
+
 from src.transform import TransformTrain, TransformEval, TransformPred
 
 
@@ -49,11 +51,6 @@ class RSDataset:
 
         with open(self.list_path, mode='r') as file:
             img_list = [line.strip() for line in file]
-        # if mode == Mode.predict:
-        #     img_list = os.listdir(f'{root}/images')
-        # else:
-        #     with open(self.list_path, mode='r') as file:
-        #         img_list = [line.strip() for line in file]
 
         if mode == Mode.train:
             self.img_list = [
@@ -73,70 +70,88 @@ class RSDataset:
 
         self._number = len(self.img_list)
 
-    # def input_transform(self, image: np.ndarray):
-    #     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    #     image = cv2.resize(image, (self.base_size, self.base_size))
-    #     image = image / 255.0
-    #     image -= self.mean
-    #     image /= self.std
-    #     return image.astype(np.float32)
+    def input_transform(self, image: np.ndarray):
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image = cv2.resize(image, (self.base_size, self.base_size))
+        image = image / 255.0
+        image -= self.mean
+        image /= self.std
+        return image.astype(np.float32)
 
-    # def label_transform(self, label):
-    #     label = cv2.resize(label, (self.base_size, self.base_size))
-    #     label = label / 255.0
-    #     return label.astype(np.int32)
-
-    # def generate(self, image, mask=None):
-    #     image = self.input_transform(image)
-    #     image = image.transpose([2, 0, 1])
-    #     if mask is not None:
-    #         mask = self.label_transform(mask)
-    #         return image, mask
-    #     return image
+    def label_transform(self, label):
+        label = cv2.resize(label, (self.base_size, self.base_size))
+        label = label / 255.0
+        return label.astype(np.float32)
 
     def generate(self, image, mask=None):
-        if self.mode != Mode.predict:
-            item = self.transform(image=image, mask=mask)
-            image = item['image']
-            mask = item['mask']
-            image = image.transpose([2, 0, 1])
+        image = self.input_transform(image)
+        image = image.transpose([2, 0, 1])
+        if mask is not None:
+            mask = self.label_transform(mask)
             return image, mask
-        else:
-            item, resize_shape = self.transform(image=image)
-            image = item['image']
-            image = image.transpose([2, 0, 1])
-            return image, resize_shape
+        return image
 
     def __getitem__(self, item):
         if item < self._number:
             if self.mode != Mode.predict:
                 image_path, label_path = self.img_list[item]
                 image = cv2.imread(image_path, cv2.IMREAD_COLOR)
-                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                 label = cv2.imread(label_path, cv2.IMREAD_GRAYSCALE)
-                label = label / 255
                 image, label = self.generate(image, label)
                 return image.copy(), label.copy()
             else:
                 image_path, image_name = self.img_list[item]
                 image = cv2.imread(image_path, cv2.IMREAD_COLOR)
-                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                 h, w, c = image.shape
-                image, resize_shape = self.generate(image)
-                return image.copy(), resize_shape, (h, w), int(image_name.split('.')[0])
+                image = self.generate(image)
+                return image.copy(), (self.base_size, self.base_size), (h, w), int(image_name.split('.')[0])
         else:
             raise StopIteration
+
+    # def generate(self, image, mask=None):
+    #     if self.mode != Mode.predict:
+    #         item = self.transform(image=image, mask=mask)
+    #         image = item['image']
+    #         mask = item['mask']
+    #         image = image.transpose([2, 0, 1])
+    #         return image, mask
+    #     else:
+    #         item, resize_shape = self.transform(image=image)
+    #         image = item['image']
+    #         image = image.transpose([2, 0, 1])
+    #         return image, resize_shape
+    #
+    # def __getitem__(self, item):
+    #     if item < self._number:
+    #         if self.mode != Mode.predict:
+    #             image_path, label_path = self.img_list[item]
+    #             image = cv2.imread(image_path, cv2.IMREAD_COLOR)
+    #             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    #             label = cv2.imread(label_path, cv2.IMREAD_GRAYSCALE)
+    #             label = label / 255.0
+    #             image, label = self.generate(image, label)
+    #             return image.copy(), label.copy()
+    #         else:
+    #             image_path, image_name = self.img_list[item]
+    #             image = cv2.imread(image_path, cv2.IMREAD_COLOR)
+    #             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    #             h, w, c = image.shape
+    #             image, resize_shape = self.generate(image)
+    #             return image.copy(), resize_shape, (h, w), int(image_name.split('.')[0])
+    #     else:
+    #         raise StopIteration
 
     def __len__(self):
         return self._number
 
 
 if __name__ == '__main__':
-    dataset_train_buffer = RSDataset(root='../datas', mode=Mode.train,
-                                     multiscale=True, scale=0.5,
-                                     base_size=640, crop_size=(512, 512))
-    img, mask = dataset_train_buffer[0]
-    print(img.shape, mask.shape)
+    pass
+    # dataset_train_buffer = RSDataset(root='../datas', mode=Mode.train,
+    #                                  multiscale=True, scale=0.5,
+    #                                  base_size=640, crop_size=(512, 512))
+    # img, mask = dataset_train_buffer[0]
+    # print(img.shape, mask.shape)
 
     # dataset_train_buffer = RSDataset(root='../datas/train', mode=Mode.predict, base_size=640)
     #
