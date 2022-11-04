@@ -38,15 +38,21 @@ class TransformEval:
 
 class TransformPred:
     def __init__(self, base_size, mean, std):
-        self.LongestMaxSize = A.LongestMaxSize(base_size)
-
+        # self.LongestMaxSize = A.LongestMaxSize(base_size)
+        #
+        # self.transforms = A.Compose([
+        #     A.PadIfNeeded(min_height=base_size, min_width=base_size, border_mode=cv2.BORDER_CONSTANT,
+        #                   position="top_left", value=0),
+        #     A.Normalize(mean=mean, std=std),
+        # ])
+        self.base_size = base_size
         self.transforms = A.Compose([
-            A.PadIfNeeded(min_height=base_size, min_width=base_size, border_mode=cv2.BORDER_CONSTANT,
-                          position="top_left", value=0),
+            A.Resize(base_size, base_size),
             A.Normalize(mean=mean, std=std),
         ])
 
     def __call__(self, image):
-        resize_image = self.LongestMaxSize(image=image)['image']
-        resize_shape = resize_image.shape[:2]
-        return self.transforms(image=resize_image), resize_shape
+        # resize_image = self.LongestMaxSize(image=image)['image']
+        # resize_shape = resize_image.shape[:2]
+        # return self.transforms(image=resize_image), resize_shape
+        return self.transforms(image=image), (self.base_size, self.base_size)
