@@ -74,7 +74,7 @@ def trainNet(net, criterion, epochs, batch_size):
     dataloader_valid = dataset_valid.create_tuple_iterator()
 
     total_train_steps = train_steps * epochs
-    lr_iter = cosine_lr(0.015, total_train_steps, total_train_steps)
+    lr_iter = cosine_lr(0.0002, total_train_steps, total_train_steps)
     params = net.trainable_params()
     opt = nn.Adam(params=params, learning_rate=lr_iter)
 
