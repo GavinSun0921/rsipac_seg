@@ -36,7 +36,7 @@ def predictNet(net):
                                        crop_size=(figsize, figsize))
     dataset_predict = ds.GeneratorDataset(
         source=dataset_predict_buffer,
-        column_names=['data', 'original_shape', 'filename'],
+        column_names=['data', 'resize_shape', 'original_shape', 'filename'],
         shuffle=False, num_parallel_workers=num_parallel_workers,
         python_multiprocessing=python_multiprocessing
     )
@@ -44,7 +44,8 @@ def predictNet(net):
     predict_steps = dataset_predict.get_dataset_size()
     dataloader_predict = dataset_predict.create_tuple_iterator()
     with tqdm(total=predict_steps, desc='Prediction', unit='img') as pbar:
-        for step, (img, original_shape, filename) in enumerate(dataloader_predict):
+        for step, (img, resize_shape, original_shape, filename) in enumerate(dataloader_predict):
+            resize_shape = resize_shape[0].asnumpy().tolist()
             original_shape = original_shape[0].asnumpy().tolist()
             filename = filename[0].asnumpy()
             maskname = f'{filename}.png'
@@ -55,7 +56,7 @@ def predictNet(net):
                 pred = net(img)
 
             pred = pred.asnumpy()
-            pred = pred[0, 0, :, :]
+            pred = pred[0, 0, :resize_shape[0], :resize_shape[1]]
             pred = cv2.resize(pred, (original_shape[1], original_shape[0]))
 
             pred[pred >= 0.5] = 255
