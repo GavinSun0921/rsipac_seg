@@ -105,7 +105,7 @@ class RSDataset:
                 image = cv2.imread(image_path, cv2.IMREAD_COLOR)
                 h, w, c = image.shape
                 image = self.generate(image)
-                return image.copy(), (self.base_size, self.base_size), (h, w), int(image_name.split('.')[0])
+                return image.copy(), self.crop_size, (h, w), int(image_name.split('.')[0])
         else:
             raise StopIteration
 
