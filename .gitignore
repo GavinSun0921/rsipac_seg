@@ -10,3 +10,4 @@ datas
 pred
 train.sh
 predict.sh
+masks
