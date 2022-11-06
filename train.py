@@ -82,6 +82,8 @@ def trainNet(net, criterion, epochs, batch_size):
 ==================================DATA=======================================
     Dataset:
         batch_size: {batch_size}
+        base_size : {base_size}
+        crop_size : {figsize}
         train:
             nums : {len(dataset_train_buffer)}
             steps: {train_steps}
@@ -171,7 +173,6 @@ def get_args():
     parser.add_argument('--root', default='./datas', type=str)
     parser.add_argument('--epochs', default=200, type=int, help='Number of total epochs to train.')
     parser.add_argument('--batch_size', default=4, type=int, help='Number of datas in one batch.')
-    parser.add_argument('--figsize', default=512, type=int)
     parser.add_argument('--device_target', default='Ascend', type=str)
     parser.add_argument('--deepsupervision', default=True, type=ast.literal_eval)
     parser.add_argument('--clfhead', default=False, type=ast.literal_eval)
@@ -213,9 +214,6 @@ if __name__ == '__main__':
 
     if args.eval_per_epoch:
         eval_per_epoch = args.eval_per_epoch
-
-    if args.figsize:
-        figsize = args.figsize
 
     _net = seresnext50_unet(
         resolution=(figsize, figsize),
