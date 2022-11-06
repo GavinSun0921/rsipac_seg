@@ -67,4 +67,5 @@ class TransformPred:
         augmented = self.transforms(image=resize_image)
         image = augmented['image']
         image = np.asarray(image, np.float32)
+        image = image.transpose((2, 0, 1))
         return image, resize_shape
