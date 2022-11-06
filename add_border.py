@@ -6,7 +6,7 @@ import pandas as pd
 
 dir_test_list_csv = '../dataset/testA_new/test_list.csv'
 dir_pred = './pred'
-dir_export = './mask'
+dir_export = './masks'
 
 if __name__ == '__main__':
     border_list = pd.read_csv(dir_test_list_csv)
