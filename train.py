@@ -18,8 +18,8 @@ visual_flag = False
 
 net_name = 'seresnext50_unet'
 
-base_size = 800
-crop_size = 640
+base_size = 640
+crop_size = 512
 dir_root = './datas'
 dir_weights = './weights'
 dir_log = './logs'
