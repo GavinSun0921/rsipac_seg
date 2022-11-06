@@ -83,7 +83,6 @@ class RSDataset:
             return None
 
     def input_transform(self, image: np.ndarray):
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image = cv2.resize(image, self.crop_size)
         image = image / 255.0
         image -= self.mean
@@ -108,12 +107,14 @@ class RSDataset:
             if self.mode != Mode.predict:
                 image_path, label_path = self.img_list[item]
                 image = cv2.imread(image_path, cv2.IMREAD_COLOR)
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                 label = cv2.imread(label_path, cv2.IMREAD_GRAYSCALE)
                 image, label = self.generate(image, label)
                 return image.copy(), label.copy()
             else:
                 image_path, image_name = self.img_list[item]
                 image = cv2.imread(image_path, cv2.IMREAD_COLOR)
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                 h, w, c = image.shape
                 # image = self.generate(image)
                 image, resize_shape = self.transform(image)
