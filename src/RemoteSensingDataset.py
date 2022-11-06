@@ -109,7 +109,8 @@ class RSDataset:
                 image = cv2.imread(image_path, cv2.IMREAD_COLOR)
                 image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                 label = cv2.imread(label_path, cv2.IMREAD_GRAYSCALE)
-                image, label = self.generate(image, label)
+                # image, label = self.generate(image, label)
+                image, label = self.transform(image, label)
                 return image.copy(), label.copy()
             else:
                 image_path, image_name = self.img_list[item]

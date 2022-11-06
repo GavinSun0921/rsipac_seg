@@ -29,14 +29,15 @@ class TransformTrain:
         mask = augmented['mask']
         image = np.asarray(image, np.float32)
         mask = np.asarray(mask, np.float32)
+        mask = mask / 255.0
         image = image.transpose((2, 0, 1))
         return image, mask
 
 
 class TransformEval:
-    def __init__(self, base_size, mean, std):
+    def __init__(self, crop_size, mean, std):
         self.transforms = A.Compose([
-            A.Resize(base_size, base_size),
+            A.Resize(crop_size, crop_size),
             A.Normalize(mean=mean, std=std),
         ])
 
@@ -46,13 +47,14 @@ class TransformEval:
         mask = augmented['mask']
         image = np.asarray(image, np.float32)
         mask = np.asarray(mask, np.float32)
+        mask = mask / 255.0
         image = image.transpose((2, 0, 1))
         return image, mask
 
 
 class TransformPred:
-    def __init__(self, base_size, mean, std):
-        self.LongestMaxSize = A.LongestMaxSize(base_size)
+    def __init__(self, crop_size, mean, std):
+        self.LongestMaxSize = A.LongestMaxSize(crop_size)
 
         self.transforms = A.Compose([
             A.PadIfNeeded(min_height=None, min_width=None,
