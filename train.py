@@ -18,8 +18,8 @@ visual_flag = False
 
 net_name = 'seresnext50_unet'
 
-base_size = 1080
-figsize = 960
+base_size = 800
+crop_size = 640
 dir_root = './datas'
 dir_weights = './weights'
 dir_log = './logs'
@@ -45,7 +45,7 @@ def cosine_lr(base_lr, decay_steps, total_steps):
 def trainNet(net, criterion, epochs, batch_size):
     dataset_train_buffer = RSDataset(root=dir_root, mode=Mode.train,
                                      multiscale=True, scale=0.5,
-                                     base_size=base_size, crop_size=(figsize, figsize))
+                                     base_size=base_size, crop_size=(crop_size, crop_size))
     dataset_train = ds.GeneratorDataset(
         source=dataset_train_buffer,
         column_names=['data', 'label'],
@@ -60,7 +60,7 @@ def trainNet(net, criterion, epochs, batch_size):
 
     dataset_valid_buffer = RSDataset(root=dir_root, mode=Mode.valid,
                                      multiscale=False,
-                                     crop_size=(figsize, figsize))
+                                     crop_size=(crop_size, crop_size))
     dataset_valid = ds.GeneratorDataset(
         source=dataset_valid_buffer,
         column_names=['data', 'label'],
@@ -83,7 +83,7 @@ def trainNet(net, criterion, epochs, batch_size):
     Dataset:
         batch_size: {batch_size}
         base_size : {base_size}
-        crop_size : {figsize}
+        crop_size : {crop_size}
         train:
             nums : {len(dataset_train_buffer)}
             steps: {train_steps}
@@ -216,7 +216,7 @@ if __name__ == '__main__':
         eval_per_epoch = args.eval_per_epoch
 
     _net = seresnext50_unet(
-        resolution=(figsize, figsize),
+        resolution=(crop_size, crop_size),
         deepsupervision=args.deepsupervision,
         clfhead=args.clfhead,
         clf_threshold=args.clf_threshold,
