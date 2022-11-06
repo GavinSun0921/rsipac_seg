@@ -6,7 +6,7 @@ import pandas as pd
 
 dir_test_list_csv = '../dataset/testA_new/test_list.csv'
 dir_pred = './pred'
-dir_export = './submit'
+dir_export = './mask'
 
 if __name__ == '__main__':
     border_list = pd.read_csv(dir_test_list_csv)
@@ -15,7 +15,8 @@ if __name__ == '__main__':
         os.makedirs(dir_export)
 
     for i in border_list.index:
-        img_name = border_list.iloc[i, 0].values.astype(str)
+        img_name = border_list.iloc[i, 0]
+        img_name = f'{img_name.split(".")[0]}.png'
         border = border_list.iloc[i, 1:].values.astype(int)
         x0, y0 = border[0], border[1]
         x1, y1 = border[2], border[3]
