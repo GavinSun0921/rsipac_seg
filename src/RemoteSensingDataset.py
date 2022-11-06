@@ -28,6 +28,8 @@ class RSDataset:
         self._index = 0
         self.root = root
         self.mode = mode
+        self.multiscale = multiscale
+        self.scale = scale
         self.base_size = base_size
         self.crop_size = crop_size
         self.mean = mean
@@ -36,17 +38,10 @@ class RSDataset:
         self.list_path = None
         if mode == Mode.train:
             self.list_path = f'{root}/train/train_segemetation.txt'
-            self.transform = TransformTrain(
-                base_size=base_size, crop_size=crop_size,
-                multi_scale=multiscale, scale=scale, ignore_label=0,
-                mean=mean, std=std
-            )
         elif mode == Mode.valid:
             self.list_path = f'{root}/valid/valid_segemetation.txt'
-            self.transform = TransformEval(base_size, mean, std)
         elif mode == Mode.predict:
             self.list_path = f'{root}/test_list.txt'
-            self.transform = TransformPred(base_size, mean, std)
         else:
             raise ValueError('Mode error')
 
@@ -69,7 +64,23 @@ class RSDataset:
                 for filename in img_list
             ]
 
+        self.transform = self.get_transform()
+
         self._number = len(self.img_list)
+
+    def get_transform(self):
+        if self.mode == Mode.train:
+            return TransformTrain(
+                base_size=self.base_size, crop_size=self.crop_size,
+                multi_scale=self.multiscale, scale=self.scale, ignore_label=0,
+                mean=self.mean, std=self.std
+            )
+        elif self.mode == Mode.valid:
+            return TransformEval(self.base_size, self.mean, self.std)
+        elif self.mode == Mode.predict:
+            return TransformPred(self.base_size, self.mean, self.std)
+        else:
+            return None
 
     def input_transform(self, image: np.ndarray):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -104,8 +115,9 @@ class RSDataset:
                 image_path, image_name = self.img_list[item]
                 image = cv2.imread(image_path, cv2.IMREAD_COLOR)
                 h, w, c = image.shape
-                image = self.generate(image)
-                return image.copy(), self.crop_size, (h, w), int(image_name.split('.')[0])
+                # image = self.generate(image)
+                image, resize_shape = self.transform(image)
+                return image.copy(), resize_shape, (h, w), int(image_name.split('.')[0])
         else:
             raise StopIteration
 

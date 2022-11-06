@@ -1,5 +1,6 @@
 import albumentations as A
 import cv2
+import numpy as np
 
 
 class TransformTrain:
@@ -12,6 +13,7 @@ class TransformTrain:
                  ]
         if multi_scale:
             trans.append(A.RandomScale(scale_limit=(-scale, scale), p=0.5))
+
         trans.extend([
             A.PadIfNeeded(min_height=crop_size[0], min_width=crop_size[1], border_mode=cv2.BORDER_CONSTANT, value=0,
                           mask_value=ignore_label),
@@ -22,7 +24,13 @@ class TransformTrain:
         self.transforms = A.Compose(trans)
 
     def __call__(self, image, mask):
-        return self.transforms(image=image, mask=mask)
+        augmented = self.transforms(image=image, mask=mask)
+        image = augmented['image']
+        mask = augmented['mask']
+        image = np.asarray(image, np.float32)
+        mask = np.asarray(mask, np.float32)
+        image = image.transpose((2, 0, 1))
+        return image, mask
 
 
 class TransformEval:
@@ -33,26 +41,30 @@ class TransformEval:
         ])
 
     def __call__(self, image, mask):
-        return self.transforms(image=image, mask=mask)
+        augmented = self.transforms(image=image, mask=mask)
+        image = augmented['image']
+        mask = augmented['mask']
+        image = np.asarray(image, np.float32)
+        mask = np.asarray(mask, np.float32)
+        image = image.transpose((2, 0, 1))
+        return image, mask
 
 
 class TransformPred:
     def __init__(self, base_size, mean, std):
-        # self.LongestMaxSize = A.LongestMaxSize(base_size)
-        #
-        # self.transforms = A.Compose([
-        #     A.PadIfNeeded(min_height=base_size, min_width=base_size, border_mode=cv2.BORDER_CONSTANT,
-        #                   position="top_left", value=0),
-        #     A.Normalize(mean=mean, std=std),
-        # ])
-        self.base_size = base_size
+        self.LongestMaxSize = A.LongestMaxSize(base_size)
+
         self.transforms = A.Compose([
-            A.Resize(base_size, base_size),
+            A.PadIfNeeded(min_height=None, min_width=None,
+                          pad_height_divisor=64, pad_width_divisor=64,
+                          border_mode=cv2.BORDER_CONSTANT, position="top_left", value=0),
             A.Normalize(mean=mean, std=std),
         ])
 
     def __call__(self, image):
-        # resize_image = self.LongestMaxSize(image=image)['image']
-        # resize_shape = resize_image.shape[:2]
-        # return self.transforms(image=resize_image), resize_shape
-        return self.transforms(image=image), (self.base_size, self.base_size)
+        resize_image = self.LongestMaxSize(image=image)['image']
+        resize_shape = resize_image.shape[:2]
+        augmented = self.transforms(image=resize_image)
+        image = augmented['image']
+        image = np.asarray(image, np.float32)
+        return image, resize_shape
