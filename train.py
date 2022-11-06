@@ -37,7 +37,7 @@ def calc_iou(target, prediction):
 
 
 def cosine_lr(base_lr, decay_steps, total_steps):
-    for i in range( ):
+    for i in range(total_steps):
         step_ = min(i, decay_steps)
         yield base_lr * 0.5 * (1 + np.cos(np.pi * step_ / decay_steps))
 
