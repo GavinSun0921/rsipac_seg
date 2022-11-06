@@ -76,9 +76,9 @@ class RSDataset:
                 mean=self.mean, std=self.std
             )
         elif self.mode == Mode.valid:
-            return TransformEval(self.base_size, self.mean, self.std)
+            return TransformEval(self.crop_size[0], self.mean, self.std)
         elif self.mode == Mode.predict:
-            return TransformPred(self.base_size, self.mean, self.std)
+            return TransformPred(self.crop_size[0], self.mean, self.std)
         else:
             return None
 
