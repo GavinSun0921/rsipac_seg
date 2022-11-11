@@ -1,5 +1,4 @@
 from mindspore import nn
-from mindspore.common import dtype
 
 
 class BCE_DICE_LOSS(nn.LossBase):
@@ -27,14 +26,11 @@ class Criterion(nn.LossBase):
         else:
             if self.deepsupervision:
                 logits_, logits_deeps = logits
-                logits_ = logits_.squeeze(1)
                 loss = self.criterion(logits_, labels)
                 for logits_deep in logits_deeps:
-                    logits_deep = logits_deep.squeeze(1)
                     loss += self.criterion(logits_deep, labels)
                 return loss
             else:
                 logits_ = logits
-                logits_ = logits_.squeeze(1)
                 loss = self.criterion(logits_, labels)
                 return loss

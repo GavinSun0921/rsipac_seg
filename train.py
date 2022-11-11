@@ -109,6 +109,8 @@ def trainNet(net, criterion, epochs, batch_size):
         train_avg_loss = 0
         with tqdm(total=train_steps, desc=f'Epoch {epoch}/{epochs}', unit='batch') as train_pbar:
             for step, (imgs, masks) in enumerate(dataloader_train):
+                buffer = masks.asnumpy()
+                print(np.sum(((buffer != 0) & (buffer != 1))))
                 train_loss = train_model(imgs, masks)
                 train_avg_loss += train_loss.asnumpy() / train_steps
 

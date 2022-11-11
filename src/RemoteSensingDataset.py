@@ -37,9 +37,9 @@ class RSDataset:
 
         self.list_path = None
         if mode == Mode.train:
-            self.list_path = f'{root}/train/train_segemetation.txt'
+            self.list_path = f'{root}/train/train_segmentation.txt'
         elif mode == Mode.valid:
-            self.list_path = f'{root}/valid/valid_segemetation.txt'
+            self.list_path = f'{root}/valid/valid_segmentation.txt'
         elif mode == Mode.predict:
             self.list_path = f'{root}/test_list.txt'
         else:
@@ -90,7 +90,7 @@ class RSDataset:
         return image.astype(np.float32)
 
     def label_transform(self, label):
-        label = cv2.resize(label, self.crop_size)
+        label = cv2.resize(label, self.crop_size, interpolation=cv2.INTER_NEAREST)
         label = label / 255.0
         return label.astype(np.float32)
 
@@ -111,6 +111,7 @@ class RSDataset:
                 label = cv2.imread(label_path, cv2.IMREAD_GRAYSCALE)
                 # image, label = self.generate(image, label)
                 image, label = self.transform(image, label)
+                label = np.expand_dims(label, axis=0)
                 return image.copy(), label.copy()
             else:
                 image_path, image_name = self.img_list[item]
