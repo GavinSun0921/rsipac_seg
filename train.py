@@ -133,8 +133,8 @@ def trainNet(net, criterion, epochs, batch_size):
 
                     if visual_flag:
                         for i in range(pred_buffer.shape[0]):
-                            visual_pred = pred_buffer[i, :, :].astype(np.uint8)
-                            visual_mask = mask_buffer[i, :, :].astype(np.uint8)
+                            visual_pred = pred_buffer[i, 0, :, :].astype(np.uint8)
+                            visual_mask = mask_buffer[i, 0, :, :].astype(np.uint8)
                             dir_buffer = f'./valid_buffer/{epoch}'
                             if not os.path.exists(dir_buffer):
                                 os.mkdir(dir_buffer)
