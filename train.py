@@ -126,10 +126,10 @@ def trainNet(net, criterion, epochs, batch_size):
                         valid_loss, (preds, _), masks = eval_model(imgs, masks)
                     else:
                         valid_loss, preds, masks = eval_model(imgs, masks)
-                    pred_buffer = preds.squeeze(1).asnumpy().copy()
+                    pred_buffer = preds.asnumpy().copy()
                     pred_buffer[pred_buffer >= 0.5] = 1
                     pred_buffer[pred_buffer < 0.5] = 0
-                    mask_buffer = masks.asnumpy()
+                    mask_buffer = masks.asnumpy().copy()
 
                     if visual_flag:
                         for i in range(pred_buffer.shape[0]):
