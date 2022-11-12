@@ -171,7 +171,8 @@ class UNET_SERESNEXT50(nn.Cell):
         self.final_conv = nn.SequentialCell(
             init_weight(conv3x3(320, 64)),
             nn.ELU(),
-            init_weight(conv3x3(64, 1))
+            init_weight(conv3x3(64, 1)),
+            nn.Sigmoid()
         )
 
         # clf head
