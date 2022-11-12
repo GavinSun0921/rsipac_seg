@@ -171,22 +171,13 @@ class UNET_SERESNEXT50(nn.Cell):
         self.final_conv = nn.SequentialCell(
             init_weight(conv3x3(320, 64)),
             nn.ELU(),
-            init_weight(conv3x3(64, 1)),
-            nn.Sigmoid()
+            init_weight(conv3x3(64, 2))
         )
 
         # clf head
         # self.avgpool = AdaptiveAvgPool2d(1)
         self.avgpool = ops.ReduceMean(keep_dims=True)
 
-        # clf head
-        self.clf = nn.SequentialCell(
-            init_weight(nn.BatchNorm1d(2048)),
-            init_weight(nn.Dense(2048, 512)),
-            nn.ELU(),
-            init_weight(nn.BatchNorm1d(512)),
-            init_weight(nn.Dense(512, 1))
-        )
 
     def construct(self, inputs):
         # encoder
@@ -195,23 +186,6 @@ class UNET_SERESNEXT50(nn.Cell):
         x2 = self.encoder2(x1)  # ->(*,512,h/8,w/8)
         x3 = self.encoder3(x2)  # ->(*,1024,h/16,w/16)
         x4 = self.encoder4(x3)  # ->(*,2048,h/32,w/32)
-
-        # clf head
-        logits_clf = self.clf(self.avgpool(x4, 1).squeeze((-2, -1)))
-        if (not self.training) and (self.clf_threshold is not None):
-            if (nn.Sigmoid()(logits_clf) > self.clf_threshold).sum().item() == 0:
-                bs, _, h, w = inputs.shape
-                logits = ms.ops.Zeros()((bs, 1, h, w), dtype.float32)
-                if self.clfhead:
-                    if self.deepsupervision:
-                        return logits, _, _
-                    else:
-                        return logits, _
-                else:
-                    if self.deepsupervision:
-                        return logits, _
-                    else:
-                        return logits
 
         # center
         y5 = self.center(x4)  # (*, 512, h/32, w/32)
@@ -234,15 +208,7 @@ class UNET_SERESNEXT50(nn.Cell):
         logits = self.final_conv(hypercol)
 
         if self.clfhead:
-            if self.deepsupervision:
-                s4 = self.deep4(y4)
-                s3 = self.deep3(y3)
-                s2 = self.deep2(y2)
-                s1 = self.deep1(y1)
-                logits_deeps = [s4, s3, s2, s1]
-                return logits, logits_deeps, logits_clf
-            else:
-                return logits, logits_clf
+            raise ValueError('Disabled clfhead in this project.')
         else:
             if self.deepsupervision:
                 s4 = self.deep4(y4)

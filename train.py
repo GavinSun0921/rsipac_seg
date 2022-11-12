@@ -10,7 +10,7 @@ import mindspore.dataset as ds
 from mindspore import nn, context
 from tqdm import tqdm
 
-from src.Criterion import Criterion
+from src.Criterion import Criterion, CrossEntropyWithLogits
 from src.RemoteSensingDataset import RSDataset, Mode
 from src.se_resnext50 import seresnext50_unet
 
@@ -127,13 +127,16 @@ def trainNet(net, criterion, epochs, batch_size):
                     else:
                         valid_loss, preds, masks = eval_model(imgs, masks)
                     pred_buffer = preds.asnumpy().copy()
-                    pred_buffer[pred_buffer >= 0.5] = 1
-                    pred_buffer[pred_buffer < 0.5] = 0
+                    # pred_buffer[pred_buffer >= 0.5] = 1
+                    # pred_buffer[pred_buffer < 0.5] = 0
                     mask_buffer = masks.asnumpy().copy()
 
                     if visual_flag:
                         for i in range(pred_buffer.shape[0]):
                             visual_pred = pred_buffer[i, 0, :, :].astype(np.uint8)
+                            # visual_pred = visual_pred.transpose([1, 2, 0])
+                            # visual_pred = np.exp(visual_pred)
+                            # visual_pred = np.asarray(np.argmax(visual_pred, axis=2), dtype=np.uint8) * 255
                             visual_mask = mask_buffer[i, 0, :, :].astype(np.uint8)
                             dir_buffer = f'./valid_buffer/{epoch}'
                             if not os.path.exists(dir_buffer):
@@ -224,6 +227,7 @@ if __name__ == '__main__':
     )
 
     _criterion = Criterion(deepsupervision=args.deepsupervision, clfhead=args.clfhead)
+    # _criterion = CrossEntropyWithLogits(2, 255)
 
     if args.close_python_multiprocessing:
         python_multiprocessing = False
