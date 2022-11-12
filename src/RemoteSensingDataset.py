@@ -72,7 +72,7 @@ class RSDataset:
         if self.mode == Mode.train:
             return TransformTrain(
                 base_size=self.base_size, crop_size=self.crop_size,
-                multi_scale=self.multiscale, scale=self.scale, ignore_label=255,
+                multi_scale=self.multiscale, scale=self.scale, ignore_label=0,
                 mean=self.mean, std=self.std
             )
         elif self.mode == Mode.valid:
