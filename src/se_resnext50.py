@@ -44,8 +44,6 @@ class CenterBlock(nn.Cell):
 class ChannelAttentionModule(nn.Cell):
     def __init__(self, in_channel, reduction):
         super(ChannelAttentionModule, self).__init__()
-        # self.global_maxpool = AdaptiveMaxPool2d(1)
-        # self.global_avgpool = AdaptiveAvgPool2d(1)
         self.fc = nn.SequentialCell(
             init_weight(conv1x1(in_channel, in_channel // reduction)),
             nn.ReLU(),
@@ -54,8 +52,6 @@ class ChannelAttentionModule(nn.Cell):
         self.sigmoid = nn.Sigmoid()
 
     def construct(self, inputs):
-        # x1 = self.fc(self.global_maxpool(inputs))
-        # x2 = self.fc(self.global_avgpool(inputs))
         x1 = self.fc(ops.ReduceMean(keep_dims=True)(inputs, (2, 3)))
         x2 = self.fc(ops.ReduceMax(keep_dims=True)(inputs, (2, 3)))
         out = self.sigmoid(x1 + x2)
@@ -174,11 +170,6 @@ class UNET_SERESNEXT50(nn.Cell):
             init_weight(conv3x3(64, 1)),
             nn.Sigmoid()
         )
-
-        # clf head
-        # self.avgpool = AdaptiveAvgPool2d(1)
-        self.avgpool = ops.ReduceMean(keep_dims=True)
-
 
     def construct(self, inputs):
         # encoder
