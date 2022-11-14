@@ -41,8 +41,10 @@ masks = np.load("masks.npy")
 inputs = Tensor(inputs, ms.float32)
 masks = Tensor(masks, ms.float32)
 train_loss, grads = model(inputs, masks)
+out = net(inputs)
 
 context.set_context(mode=context.GRAPH_MODE, device_target=args.device_target)
 
+print(out[0, 0, :10, :10])
 print(train_loss.asnumpy())
 print(grads[0][0][0].asnumpy())
