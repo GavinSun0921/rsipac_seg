@@ -35,6 +35,7 @@ class UNet(nn.Cell):
 
         # Finale Convolution
         self.final = nn.Conv2d(filters[0], n_class, 1)
+        self.sig = nn.Sigmoid()
 
     def construct(self, inputs):
         x0 = self.conv0(inputs)                   # channel = filters[0]
@@ -49,5 +50,6 @@ class UNet(nn.Cell):
         up1 = self.up_concat1(up2, x0)
 
         final = self.final(up1)
+        final = self.sig(final)
 
         return final
