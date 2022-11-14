@@ -3,7 +3,7 @@ from mindspore import nn, ops
 from mindspore.common import dtype
 from mindspore.common.initializer import initializer, HeNormal, Normal, XavierUniform
 
-from src.senet_ms import se_resnext50_32x4d
+from src.backbone import se_resnext50
 
 
 def conv3x3(in_channel, out_channel):
@@ -119,20 +119,22 @@ class UNET_SERESNEXT50(nn.Cell):
         self.clfhead = clfhead
         self.clf_threshold = clf_threshold
 
-        seresnext50 = se_resnext50_32x4d()
-        if load_pretrained:
-            param_dict = ms.load_checkpoint(
-                'pretrained/seresnext50_ascend_v130_imagenet2012_research_cv_top1acc79_top5acc94.ckpt')
-            ms.load_param_into_net(seresnext50, param_dict)
+        seresnext50 = se_resnext50()
+        # seresnext50 = se_resnext50_32x4d()
+        # if load_pretrained:
+        #     param_dict = ms.load_checkpoint(
+        #         'pretrained/seresnext50_ascend_v130_imagenet2012_research_cv_top1acc79_top5acc94.ckpt')
+        #     ms.load_param_into_net(seresnext50, param_dict)
 
         # encoder
         self.encoder0 = nn.SequentialCell(
-            seresnext50.layer0[0],  # Conv2d
-            seresnext50.layer0[1],  # BatchNorm2d
-            seresnext50.layer0[2]   # ReLU
+            seresnext50.conv,  # Conv2d
+            seresnext50.bn,  # BatchNorm2d
+            # seresnext50.relu   # ReLU
+            nn.ReLU()
         )
         self.encoder1 = nn.SequentialCell(
-            seresnext50.layer0[3],  # MaxPool2d
+            seresnext50.maxpool,  # MaxPool2d
             seresnext50.layer1
         )
         self.encoder2 = seresnext50.layer2

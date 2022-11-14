@@ -14,7 +14,6 @@ from tqdm import tqdm
 from src.Criterion import Criterion
 from src.RemoteSensingDataset import RSDataset, Mode
 from src.se_resnext50 import seresnext50_unet
-from src.utils import TrainOneStepCellWithGrad
 
 visual_flag = False
 

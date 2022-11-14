@@ -7,7 +7,7 @@ from mindspore.nn import Adam, WithLossCell
 
 from src.Criterion import Criterion
 from src.se_resnext50 import seresnext50_unet
-from src.utils import TrainOneStepCellWithGrad
+from src.trainWithGrads import TrainOneStepCellWithGrad
 
 
 def get_args():
@@ -47,3 +47,4 @@ out = net(inputs)
 print(out[0][0, 0, :10, :10])
 print(train_loss.asnumpy())
 print(grads[0][0][0].asnumpy())
+print(grads[300].asnumpy())
