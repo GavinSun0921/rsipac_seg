@@ -91,12 +91,7 @@ class DecodeBlock(nn.Cell):
 
         self.bn1 = init_weight(nn.BatchNorm2d(in_channel))
         self.relu = nn.ReLU()
-        self.upsample = nn.SequentialCell()
-        if upsample:
-            self.upsample.append(nn.Conv2dTranspose(
-                in_channel, in_channel,
-                kernel_size=2, stride=2, pad_mode='same'
-            ))
+        self.upsample = upsample
         self.conv3x3_1 = init_weight(conv3x3(in_channel, in_channel))
         self.bn2 = init_weight(nn.BatchNorm2d(in_channel))
         self.conv3x3_2 = init_weight(conv3x3(in_channel, out_channel))
@@ -105,10 +100,14 @@ class DecodeBlock(nn.Cell):
 
     def construct(self, inputs):
         out = self.relu(self.bn1(inputs))
-        out = self.upsample(out)
+        if self.upsample:
+            bs, c, h, w = out.shape
+            up = ops.ResizeBilinear((h * 2, w * 2))
+            out = up(out)
+            inputs = up(inputs)
         out = self.conv3x3_2(self.relu(self.bn2(self.conv3x3_1(out))))
         out = self.cbam(out)
-        out += self.conv1x1(self.upsample(inputs))  # shortcut
+        out += self.conv1x1(inputs)  # shortcut
         return out
 
 
@@ -116,7 +115,7 @@ class UNET_SERESNEXT50(nn.Cell):
     def __init__(self, resolution, deepsupervision, clfhead, clf_threshold, load_pretrained=True):
         super(UNET_SERESNEXT50, self).__init__()
 
-        h, w = resolution
+        self.h, self.w = resolution
         self.deepsupervision = deepsupervision
         self.clfhead = clfhead
         self.clf_threshold = clf_threshold
@@ -152,10 +151,14 @@ class UNET_SERESNEXT50(nn.Cell):
         self.decoder0 = DecodeBlock(64, 64, upsample=True, cbam=True)
 
         # upsample
-        self.upsample4 = nn.Conv2dTranspose(64, 64, kernel_size=16, stride=16, pad_mode='same')
-        self.upsample3 = nn.Conv2dTranspose(64, 64, kernel_size=8, stride=8, pad_mode='same')
-        self.upsample2 = nn.Conv2dTranspose(64, 64, kernel_size=4, stride=4, pad_mode='same')
-        self.upsample1 = nn.Conv2dTranspose(64, 64, kernel_size=2, stride=2, pad_mode='same')
+        # self.upsample4 = nn.Conv2dTranspose(64, 64, kernel_size=16, stride=16, pad_mode='same')
+        # self.upsample3 = nn.Conv2dTranspose(64, 64, kernel_size=8, stride=8, pad_mode='same')
+        # self.upsample2 = nn.Conv2dTranspose(64, 64, kernel_size=4, stride=4, pad_mode='same')
+        # self.upsample1 = nn.Conv2dTranspose(64, 64, kernel_size=2, stride=2, pad_mode='same')
+        self.upsample4 = ops.ResizeBilinear((self.h, self.w))
+        self.upsample3 = ops.ResizeBilinear((self.h, self.w))
+        self.upsample2 = ops.ResizeBilinear((self.h, self.w))
+        self.upsample1 = ops.ResizeBilinear((self.h, self.w))
 
         # deep supervision
         self.deep4 = nn.SequentialCell(init_weight(conv1x1(64, 1)), nn.Sigmoid())
