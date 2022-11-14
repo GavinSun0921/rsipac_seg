@@ -86,28 +86,27 @@ class CBAM(nn.Cell):
 
 
 class DecodeBlock(nn.Cell):
-    def __init__(self, in_channel, out_channel, upsample: bool, cbam: bool):
+    def __init__(self, in_channel, out_channel, upsample: bool, target_size, cbam: bool):
         super(DecodeBlock, self).__init__()
 
         self.bn1 = init_weight(nn.BatchNorm2d(in_channel))
         self.relu = nn.ReLU()
-        self.upsample = upsample
+        self.upsample = ops.ResizeBilinear(target_size)
         self.conv3x3_1 = init_weight(conv3x3(in_channel, in_channel))
         self.bn2 = init_weight(nn.BatchNorm2d(in_channel))
         self.conv3x3_2 = init_weight(conv3x3(in_channel, out_channel))
-        self.cbam = CBAM(out_channel, reduction=16)
+        self.cbam = None
+        if cbam:
+            self.cbam = CBAM(out_channel, reduction=16)
         self.conv1x1 = init_weight(conv1x1(in_channel, out_channel))
 
     def construct(self, inputs):
         out = self.relu(self.bn1(inputs))
-        if self.upsample:
-            bs, c, h, w = out.shape
-            up = ops.ResizeBilinear((h * 2, w * 2))
-            out = up(out)
-            inputs = up(inputs)
+        out = self.upsample(out)
         out = self.conv3x3_2(self.relu(self.bn2(self.conv3x3_1(out))))
-        out = self.cbam(out)
-        out += self.conv1x1(inputs)  # shortcut
+        if self.cbam is not None:
+            out = self.cbam(out)
+        out += self.conv1x1(self.upsample(inputs))  # shortcut
         return out
 
 
@@ -115,7 +114,7 @@ class UNET_SERESNEXT50(nn.Cell):
     def __init__(self, resolution, deepsupervision, clfhead, clf_threshold, load_pretrained=True):
         super(UNET_SERESNEXT50, self).__init__()
 
-        self.h, self.w = resolution
+        h, w = resolution
         self.deepsupervision = deepsupervision
         self.clfhead = clfhead
         self.clf_threshold = clf_threshold
@@ -144,21 +143,21 @@ class UNET_SERESNEXT50(nn.Cell):
         self.center = CenterBlock(2048, 512)
 
         # decoder
-        self.decoder4 = DecodeBlock(512 + 2048, 64, upsample=True, cbam=False)
-        self.decoder3 = DecodeBlock(64 + 1024, 64, upsample=True, cbam=False)
-        self.decoder2 = DecodeBlock(64 + 512, 64, upsample=True, cbam=False)
-        self.decoder1 = DecodeBlock(64 + 256, 64, upsample=True, cbam=False)
-        self.decoder0 = DecodeBlock(64, 64, upsample=True, cbam=True)
+        self.decoder4 = DecodeBlock(512 + 2048, 64, upsample=True, target_size=(h // 16, w // 16), cbam=False)
+        self.decoder3 = DecodeBlock(64 + 1024, 64, upsample=True, target_size=(h // 8, w // 8), cbam=False)
+        self.decoder2 = DecodeBlock(64 + 512, 64, upsample=True, target_size=(h // 4, w // 4), cbam=False)
+        self.decoder1 = DecodeBlock(64 + 256, 64, upsample=True, target_size=(h // 2, w // 2), cbam=False)
+        self.decoder0 = DecodeBlock(64, 64, upsample=True, target_size=(h, w), cbam=False)
 
         # upsample
         # self.upsample4 = nn.Conv2dTranspose(64, 64, kernel_size=16, stride=16, pad_mode='same')
         # self.upsample3 = nn.Conv2dTranspose(64, 64, kernel_size=8, stride=8, pad_mode='same')
         # self.upsample2 = nn.Conv2dTranspose(64, 64, kernel_size=4, stride=4, pad_mode='same')
         # self.upsample1 = nn.Conv2dTranspose(64, 64, kernel_size=2, stride=2, pad_mode='same')
-        self.upsample4 = ops.ResizeBilinear((self.h, self.w))
-        self.upsample3 = ops.ResizeBilinear((self.h, self.w))
-        self.upsample2 = ops.ResizeBilinear((self.h, self.w))
-        self.upsample1 = ops.ResizeBilinear((self.h, self.w))
+        self.upsample4 = ops.ResizeBilinear((h, w))
+        self.upsample3 = ops.ResizeBilinear((h, w))
+        self.upsample2 = ops.ResizeBilinear((h, w))
+        self.upsample1 = ops.ResizeBilinear((h, w))
 
         # deep supervision
         self.deep4 = nn.SequentialCell(init_weight(conv1x1(64, 1)), nn.Sigmoid())
