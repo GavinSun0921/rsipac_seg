@@ -4,6 +4,7 @@ from mindspore.common import dtype
 from mindspore.common.initializer import initializer, HeNormal, Normal, XavierUniform
 
 from src.senet_ms import se_resnext50_32x4d
+from src.unet_parts import UnetUp
 
 
 def conv3x3(in_channel, out_channel):
@@ -143,21 +144,25 @@ class UNET_SERESNEXT50(nn.Cell):
         self.center = CenterBlock(2048, 512)
 
         # decoder
-        self.decoder4 = DecodeBlock(512 + 2048, 64, upsample=True, target_size=(h // 16, w // 16), cbam=False)
-        self.decoder3 = DecodeBlock(64 + 1024, 64, upsample=True, target_size=(h // 8, w // 8), cbam=False)
-        self.decoder2 = DecodeBlock(64 + 512, 64, upsample=True, target_size=(h // 4, w // 4), cbam=False)
-        self.decoder1 = DecodeBlock(64 + 256, 64, upsample=True, target_size=(h // 2, w // 2), cbam=False)
-        self.decoder0 = DecodeBlock(64, 64, upsample=True, target_size=(h, w), cbam=False)
+        # self.decoder4 = DecodeBlock(512 + 2048, 64, upsample=True, target_size=(h // 16, w // 16), cbam=False)
+        # self.decoder3 = DecodeBlock(64 + 1024, 64, upsample=True, target_size=(h // 8, w // 8), cbam=False)
+        # self.decoder2 = DecodeBlock(64 + 512, 64, upsample=True, target_size=(h // 4, w // 4), cbam=False)
+        # self.decoder1 = DecodeBlock(64 + 256, 64, upsample=True, target_size=(h // 2, w // 2), cbam=False)
+        # self.decoder0 = DecodeBlock(64, 64, upsample=True, target_size=(h, w), cbam=False)
+        self.up_concat4 = UnetUp(512, 1024, 64, False, 2)
+        self.up_concat3 = UnetUp(64, 512, 64, False, 2)
+        self.up_concat2 = UnetUp(64, 256, 64, False, 2)
+        self.up_concat1 = UnetUp(64, 64, 64, False, 2)
+        self.decoder0 = init_weight(conv3x3(64, 64))
+        self.upsample_add = ops.ResizeBilinear((h, w))
 
         # upsample
-        # self.upsample4 = nn.Conv2dTranspose(64, 64, kernel_size=16, stride=16, pad_mode='same')
-        # self.upsample3 = nn.Conv2dTranspose(64, 64, kernel_size=8, stride=8, pad_mode='same')
-        # self.upsample2 = nn.Conv2dTranspose(64, 64, kernel_size=4, stride=4, pad_mode='same')
-        # self.upsample1 = nn.Conv2dTranspose(64, 64, kernel_size=2, stride=2, pad_mode='same')
         self.upsample4 = ops.ResizeBilinear((h, w))
         self.upsample3 = ops.ResizeBilinear((h, w))
         self.upsample2 = ops.ResizeBilinear((h, w))
         self.upsample1 = ops.ResizeBilinear((h, w))
+
+        self.concat = ms.ops.Concat(axis=1)
 
         # deep supervision
         self.deep4 = nn.SequentialCell(init_weight(conv1x1(64, 1)), nn.Sigmoid())
@@ -185,19 +190,23 @@ class UNET_SERESNEXT50(nn.Cell):
         y5 = self.center(x4)  # (*, 512, h/32, w/32)
 
         # decoder
-        cat = ms.ops.Concat(axis=1)
-        y4 = self.decoder4(cat((x4, y5)))
-        y3 = self.decoder3(cat((x3, y4)))
-        y2 = self.decoder2(cat((x2, y3)))
-        y1 = self.decoder1(cat((x1, y2)))
-        y0 = self.decoder0(y1)  # (*, 64, h, w)
+        # y4 = self.decoder4(cat((x4, y5)))
+        # y3 = self.decoder3(cat((x3, y4)))
+        # y2 = self.decoder2(cat((x2, y3)))
+        # y1 = self.decoder1(cat((x1, y2)))
+        # y0 = self.decoder0(y1)  # (*, 64, h, w)
+        y4 = self.up_concat4(y5, x3)
+        y3 = self.up_concat3(y4, x2)
+        y2 = self.up_concat2(y3, x1)
+        y1 = self.up_concat1(y2, x0)
+        y0 = self.upsample_add(self.decoder0(y1))
 
         # hypercolumns
         y4 = self.upsample4(y4)
         y3 = self.upsample3(y3)
         y2 = self.upsample2(y2)
         y1 = self.upsample1(y1)
-        hypercol = cat((y0, y1, y2, y3, y4))
+        hypercol = self.concat((y0, y1, y2, y3, y4))
 
         logits = self.final_conv(hypercol)
 
