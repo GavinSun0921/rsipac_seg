@@ -8,11 +8,13 @@ import numpy as np
 import mindspore as ms
 import mindspore.dataset as ds
 from mindspore import nn, context
+from mindspore.nn import TrainOneStepCell
 from tqdm import tqdm
 
-from src.Criterion import Criterion, CrossEntropyWithLogits
+from src.Criterion import Criterion
 from src.RemoteSensingDataset import RSDataset, Mode
 from src.se_resnext50 import seresnext50_unet
+from src.utils import TrainOneStepCellWithGrad
 
 visual_flag = False
 
@@ -95,7 +97,7 @@ def trainNet(net, criterion, epochs, batch_size):
 
     net_with_loss = nn.WithLossCell(backbone=net, loss_fn=criterion)
 
-    train_model = nn.TrainOneStepCell(network=net_with_loss, optimizer=opt)
+    train_model = TrainOneStepCell(network=net_with_loss, optimizer=opt)
 
     eval_model = nn.WithEvalCell(network=net, loss_fn=criterion)
 
