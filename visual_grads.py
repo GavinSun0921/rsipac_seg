@@ -19,9 +19,10 @@ def get_args():
 
 
 args = get_args()
+context.set_context(mode=context.GRAPH_MODE, device_target=args.device_target)
 
 net = seresnext50_unet(
-    resolution=(512, 512),
+    resolution=(128, 128),
     deepsupervision=True,
     clfhead=False,
     clf_threshold=None,
@@ -43,8 +44,6 @@ masks = Tensor(masks, ms.float32)
 train_loss, grads = model(inputs, masks)
 out = net(inputs)
 
-context.set_context(mode=context.GRAPH_MODE, device_target=args.device_target)
-
-print(out[0, 0, :10, :10])
+print(out[0][0, 0, :10, :10])
 print(train_loss.asnumpy())
 print(grads[0][0][0].asnumpy())
