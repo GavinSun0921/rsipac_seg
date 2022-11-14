@@ -26,7 +26,7 @@ dir_weights = './weights'
 dir_log = './logs'
 prefix = net_name
 python_multiprocessing = True
-num_parallel_workers = 50
+num_parallel_workers = 32
 eval_per_epoch = 0
 
 
@@ -179,7 +179,7 @@ def get_args():
     parser.add_argument('--clfhead', default=False, type=ast.literal_eval)
     parser.add_argument('--clf_threshold', default=None, type=float)
     parser.add_argument('--load_pretrained', default=True, type=ast.literal_eval)
-    parser.add_argument('--num_parallel_workers', default=50, type=int)
+    parser.add_argument('--num_parallel_workers', default=32, type=int)
     parser.add_argument('--eval_per_epoch', default=0, type=int)
     parser.add_argument('--close_python_multiprocessing', default=False, action='store_true')
     parser.add_argument('--visual', default=False, action='store_true', help='Visual at eval.')
