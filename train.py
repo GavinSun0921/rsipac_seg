@@ -11,13 +11,15 @@ from mindspore import nn, context
 from mindspore.nn import TrainOneStepCell
 from tqdm import tqdm
 
-from src.Criterion import Criterion
+from src.Criterion import Criterion, BCE_DICE_LOSS
 from src.RemoteSensingDataset import RSDataset, Mode
 from src.se_resnext50 import seresnext50_unet
+from src.testnet import UNet
 
 visual_flag = False
 
-net_name = 'seresnext50_unet'
+# net_name = 'seresnext50_unet'
+net_name = 'unet'
 
 base_size = 640
 crop_size = 512
@@ -123,10 +125,10 @@ def trainNet(net, criterion, epochs, batch_size):
             valid_avg_iou = 0
             with tqdm(total=valid_steps, desc='Validation', unit='batch') as eval_pbar:
                 for idx, (imgs, masks) in enumerate(dataloader_valid):
-                    if net.deepsupervision:
-                        valid_loss, (preds, _), masks = eval_model(imgs, masks)
-                    else:
-                        valid_loss, preds, masks = eval_model(imgs, masks)
+                    valid_loss, preds, masks = eval_model(imgs, masks)
+                    if net_name == 'seresnext50_unet':
+                        if net.deepsupervision:
+                            preds = preds[0]
                     pred_buffer = preds.asnumpy().copy()
                     pred_buffer[pred_buffer >= 0.5] = 1
                     pred_buffer[pred_buffer < 0.5] = 0
@@ -216,16 +218,21 @@ if __name__ == '__main__':
     if args.eval_per_epoch:
         eval_per_epoch = args.eval_per_epoch
 
-    _net = seresnext50_unet(
-        resolution=(crop_size, crop_size),
-        deepsupervision=args.deepsupervision,
-        clfhead=args.clfhead,
-        clf_threshold=args.clf_threshold,
-        load_pretrained=args.load_pretrained
-    )
-
-    _criterion = Criterion(deepsupervision=args.deepsupervision, clfhead=args.clfhead)
-    # _criterion = CrossEntropyWithLogits(2, 255)
+    if net_name == 'seresnext50_unet':
+        _net = seresnext50_unet(
+            resolution=(crop_size, crop_size),
+            deepsupervision=args.deepsupervision,
+            clfhead=args.clfhead,
+            clf_threshold=args.clf_threshold,
+            load_pretrained=args.load_pretrained
+        )
+        _criterion = Criterion(deepsupervision=args.deepsupervision, clfhead=args.clfhead)
+    else:
+        _net = UNet(3)
+        if args.load_pretrained:
+            param_dict = ms.load_checkpoint('weights/unet_medical_ascend_v170_isbi_official_cv_acc91.39.ckpt')
+            ms.load_param_into_net(_net, param_dict)
+        _criterion = BCE_DICE_LOSS()
 
     if args.close_python_multiprocessing:
         python_multiprocessing = False

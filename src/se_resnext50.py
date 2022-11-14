@@ -4,7 +4,7 @@ from mindspore.common import dtype
 from mindspore.common.initializer import initializer, HeNormal, Normal, XavierUniform
 
 from src.senet_ms import se_resnext50_32x4d
-from src.unet_parts import UnetUp
+from src.unet_parts_modify import UnetUp
 
 
 def conv3x3(in_channel, out_channel):
