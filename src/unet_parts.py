@@ -59,15 +59,15 @@ class UnetUp(nn.Cell):
     """
     Upsampling high_feature with factor=2 and concat with low feature
     """
-    def __init__(self, in_channel_high, in_channel_low, out_channel, use_deconv, n_concat=2):
+    def __init__(self, in_channel, out_channel, use_deconv, n_concat=2):
         super(UnetUp, self).__init__()
-        self.conv = UnetConv2d(in_channel_high + in_channel_low, out_channel, False)
+        self.conv = UnetConv2d(in_channel + (n_concat - 2) * out_channel, out_channel, False)
         self.concat = P.Concat(axis=1)
         self.use_deconv = use_deconv
         if use_deconv:
-            self.up_conv = nn.Conv2dTranspose(in_channel_high, in_channel_high, kernel_size=2, stride=2, pad_mode="same")
+            self.up_conv = nn.Conv2dTranspose(in_channel, out_channel, kernel_size=2, stride=2, pad_mode="same")
         else:
-            self.up_conv = nn.Conv2d(in_channel_high, in_channel_high, 1)
+            self.up_conv = nn.Conv2d(in_channel, out_channel, 1)
 
     def construct(self, high_feature, *low_feature):
         if self.use_deconv:
