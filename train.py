@@ -230,7 +230,7 @@ if __name__ == '__main__':
     else:
         _net = UNet(3)
         if args.load_pretrained:
-            param_dict = ms.load_checkpoint('weights/unet_medical_ascend_v170_isbi_official_cv_acc91.39.ckpt')
+            param_dict = ms.load_checkpoint('pretrained/unet_medical_ascend_v170_isbi_official_cv_acc91.39.ckpt')
             ms.load_param_into_net(_net, param_dict)
         _criterion = BCE_DICE_LOSS()
 
