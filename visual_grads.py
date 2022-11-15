@@ -5,7 +5,7 @@ import numpy as np
 from mindspore import Tensor, context
 from mindspore.nn import Adam, WithLossCell
 
-from src.Criterion import Criterion, BCE_DICE_LOSS
+from src.Criterion import Criterion, BCE_DICE_LOSS, CrossEntropyWithLogits
 from src.se_resnext50 import seresnext50_unet
 from src.testnet import UNet
 from src.trainWithGrads import TrainOneStepCellWithGrad
@@ -36,7 +36,7 @@ context.set_context(mode=context.GRAPH_MODE, device_target=args.device_target)
 net = UNet(3)
 param_dict = ms.load_checkpoint('weights/unet_best_epoch1_on_cpu.ckpt')
 ms.load_param_into_net(net, param_dict)
-criterion = BCE_DICE_LOSS()
+criterion = CrossEntropyWithLogits()
 
 net_with_loss = WithLossCell(backbone=net, loss_fn=criterion)
 opt = Adam(params=net_with_loss.get_parameters())
