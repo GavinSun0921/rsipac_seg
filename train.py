@@ -11,7 +11,7 @@ from mindspore import nn, context
 from mindspore.nn import TrainOneStepCell
 from tqdm import tqdm
 
-from src.Criterion import Criterion, BCE_DICE_LOSS
+from src.Criterion import Criterion, BCE_DICE_LOSS, CrossEntropyWithLogits
 from src.RemoteSensingDataset import RSDataset, Mode
 from src.se_resnext50 import seresnext50_unet
 from src.testnet import UNet
@@ -112,6 +112,8 @@ def trainNet(net, criterion, epochs, batch_size):
         train_avg_loss = 0
         with tqdm(total=train_steps, desc=f'Epoch {epoch}/{epochs}', unit='batch') as train_pbar:
             for step, (imgs, masks) in enumerate(dataloader_train):
+                print(imgs.shape)
+                print(masks.shape)
                 train_loss = train_model(imgs, masks)
                 train_avg_loss += train_loss.asnumpy() / train_steps
 
@@ -207,7 +209,7 @@ if __name__ == '__main__':
 
     args = get_args()
 
-    context.set_context(mode=context.GRAPH_MODE, device_target=args.device_target)
+    context.set_context(mode=context.PYNATIVE_MODE, device_target=args.device_target)  # GRAPH_MODE
 
     if args.root:
         dir_root = args.root
@@ -228,11 +230,12 @@ if __name__ == '__main__':
         )
         _criterion = Criterion(deepsupervision=args.deepsupervision, clfhead=args.clfhead)
     else:
-        _net = UNet(3)
-        if args.load_pretrained:
-            param_dict = ms.load_checkpoint('pretrained/unet_medical_ascend_v170_isbi_official_cv_acc91.39.ckpt')
-            ms.load_param_into_net(_net, param_dict)
-        _criterion = BCE_DICE_LOSS()
+        _net = UNet(3, 2)
+        # if args.load_pretrained:
+        #     param_dict = ms.load_checkpoint('pretrained/unet_medical_ascend_v170_isbi_official_cv_acc91.39.ckpt')
+        #     ms.load_param_into_net(_net, param_dict)
+        # _criterion = BCE_DICE_LOSS()
+        _criterion = CrossEntropyWithLogits(2)
 
     if args.close_python_multiprocessing:
         python_multiprocessing = False

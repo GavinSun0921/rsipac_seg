@@ -50,6 +50,6 @@ class UNet(nn.Cell):
         up1 = self.up_concat1(up2, x0)
 
         final = self.final(up1)
-        final = self.sig(final)
+        # final = self.sig(final)
 
         return final

@@ -1,7 +1,7 @@
 import mindspore
 import mindspore.nn as nn
-import mindspore.ops.operations as F
-from mindspore import dtype as mstype
+import mindspore.ops.operations as P
+from mindspore import dtype as mstype, Tensor
 from mindspore.nn import Cell
 from mindspore.ops import functional as F2
 
@@ -40,75 +40,42 @@ class Criterion(nn.LossBase):
                 loss = self.criterion(logits_, labels)
                 return loss
 
-
-class MyLoss(Cell):
+class CrossEntropyWithLogits(nn.LossBase):
     """
-    Base class for other losses.
+    Cross-entropy loss function for semantic segmentation,
+    and different classes have the same weight.
     """
 
-    def __init__(self, reduction='mean'):
-        super(MyLoss, self).__init__()
-        if reduction is None:
-            reduction = 'none'
-
-        if reduction not in ('mean', 'sum', 'none'):
-            raise ValueError(f"reduction method for {reduction.lower()} is not supported")
-
-        self.average = True
-        self.reduce = True
-        if reduction == 'sum':
-            self.average = False
-        if reduction == 'none':
-            self.reduce = False
-
-        self.reduce_mean = F.ReduceMean()
-        self.reduce_sum = F.ReduceSum()
-        self.mul = F.Mul()
-        self.cast = F.Cast()
-
-    def get_axis(self, x):
-        shape = F2.shape(x)
-        length = F2.tuple_len(shape)
-        perm = F2.make_range(0, length)
-        return perm
-
-    def get_loss(self, x, weights=1.0):
-        """
-        Computes the weighted loss
-        Args:
-            weights: Optional `Tensor` whose rank is either 0, or the same rank as inputs, and must be broadcastable to
-                inputs (i.e., all dimensions must be either `1`, or the same as the corresponding inputs dimension).
-        """
-        input_dtype = x.dtype
-        x = self.cast(x, mstype.float32)
-        weights = self.cast(weights, mstype.float32)
-        x = self.mul(weights, x)
-        if self.reduce and self.average:
-            x = self.reduce_mean(x, self.get_axis(x))
-        if self.reduce and not self.average:
-            x = self.reduce_sum(x, self.get_axis(x))
-        x = self.cast(x, input_dtype)
-        return x
-
-    def construct(self, base, target):
-        raise NotImplementedError
-
-
-class CrossEntropyWithLogits(MyLoss):
-    def __init__(self):
+    def __init__(self, num_classes=19, ignore_label=255, image_size=None):
         super(CrossEntropyWithLogits, self).__init__()
-        self.transpose_fn = F.Transpose()
-        self.reshape_fn = F.Reshape()
-        self.softmax_cross_entropy_loss = nn.SoftmaxCrossEntropyWithLogits()
-        self.cast = F.Cast()
+        #self.resize = F.ResizeBilinear(image_size)
+        self.one_hot = P.OneHot(axis=-1)
+        self.on_value = Tensor(1.0, mstype.float32)
+        self.off_value = Tensor(0.0, mstype.float32)
+        self.cast = P.Cast()
+        self.ce = nn.SoftmaxCrossEntropyWithLogits()
+        self.not_equal = P.NotEqual()
+        self.num_classes = num_classes
+        self.ignore_label = ignore_label
+        self.mul = P.Mul()
+        self.argmax = P.Argmax(output_type=mstype.int32)
+        self.sum = P.ReduceSum(False)
+        self.div = P.RealDiv()
+        self.transpose = P.Transpose()
+        self.reshape = P.Reshape()
 
-    def construct(self, logits, label):
-        # NCHW->NHWC
-        logits = self.transpose_fn(logits, (0, 2, 3, 1))
-        logits = self.cast(logits, mindspore.float32)
-        label = self.transpose_fn(label, (0, 2, 3, 1))
-        _, _, _, c = F.Shape()(label)
+    def construct(self, logits, labels):
+        """Loss construction."""
+        # logits = self.resize(logits)
+        labels_int = self.cast(labels, mstype.int32)
+        labels_int = self.reshape(labels_int, (-1,))
+        logits_ = self.transpose(logits, (0, 2, 3, 1))
+        logits_ = self.reshape(logits_, (-1, self.num_classes))
+        weights = self.not_equal(labels_int, self.ignore_label)
+        weights = self.cast(weights, mstype.float32)
+        one_hot_labels = self.one_hot(labels_int, self.num_classes, self.on_value, self.off_value)
+        loss = self.ce(logits_, one_hot_labels)
+        loss = self.mul(weights, loss)
+        loss = self.div(self.sum(loss), self.sum(weights))
 
-        loss = self.reduce_mean(
-            self.softmax_cross_entropy_loss(self.reshape_fn(logits, (-1, c)), self.reshape_fn(label, (-1, c))))
-        return self.get_loss(loss)
+        return loss
