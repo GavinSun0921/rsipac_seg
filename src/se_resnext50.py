@@ -67,7 +67,6 @@ class SpatialAttentionModule(nn.Cell):
 
     def construct(self, inputs):
         avgout = ops.ReduceMean(keep_dims=True)(inputs, 1)
-        # _, maxout = ops.ArgMaxWithValue(1, True)(inputs)
         maxout = ops.ReduceMax(keep_dims=True)(inputs, 1)
         out = ops.Concat(axis=1)((avgout, maxout))
         out = self.sigmoid(self.conv3x3(out))
@@ -87,7 +86,7 @@ class CBAM(nn.Cell):
 
 
 class DecodeBlock(nn.Cell):
-    def __init__(self, in_channel, out_channel, upsample: bool, target_size, cbam: bool):
+    def __init__(self, in_channel, out_channel, target_size, cbam: bool):
         super(DecodeBlock, self).__init__()
 
         self.bn1 = init_weight(nn.BatchNorm2d(in_channel))
@@ -112,13 +111,10 @@ class DecodeBlock(nn.Cell):
 
 
 class UNET_SERESNEXT50(nn.Cell):
-    def __init__(self, resolution, deepsupervision, clfhead, clf_threshold, load_pretrained=True):
+    def __init__(self, resolution, load_pretrained=True):
         super(UNET_SERESNEXT50, self).__init__()
 
         h, w = resolution
-        self.deepsupervision = deepsupervision
-        self.clfhead = clfhead
-        self.clf_threshold = clf_threshold
 
         seresnext50 = se_resnext50_32x4d()
         if load_pretrained:
@@ -144,17 +140,17 @@ class UNET_SERESNEXT50(nn.Cell):
         self.center = CenterBlock(2048, 512)
 
         # decoder
-        # self.decoder4 = DecodeBlock(512 + 2048, 64, upsample=True, target_size=(h // 16, w // 16), cbam=False)
-        # self.decoder3 = DecodeBlock(64 + 1024, 64, upsample=True, target_size=(h // 8, w // 8), cbam=False)
-        # self.decoder2 = DecodeBlock(64 + 512, 64, upsample=True, target_size=(h // 4, w // 4), cbam=False)
-        # self.decoder1 = DecodeBlock(64 + 256, 64, upsample=True, target_size=(h // 2, w // 2), cbam=False)
-        # self.decoder0 = DecodeBlock(64, 64, upsample=True, target_size=(h, w), cbam=False)
-        self.up_concat4 = UnetUp(512, 1024, 64, False, 2)
-        self.up_concat3 = UnetUp(64, 512, 64, False, 2)
-        self.up_concat2 = UnetUp(64, 256, 64, False, 2)
-        self.up_concat1 = UnetUp(64, 64, 64, False, 2)
-        self.decoder0 = init_weight(conv3x3(64, 64))
-        self.upsample_add = ops.ResizeBilinear((h, w))
+        self.decoder4 = DecodeBlock(512 + 2048, 64, target_size=(h // 16, w // 16), cbam=False)
+        self.decoder3 = DecodeBlock(64 + 1024, 64, target_size=(h // 8, w // 8), cbam=False)
+        self.decoder2 = DecodeBlock(64 + 512, 64, target_size=(h // 4, w // 4), cbam=False)
+        self.decoder1 = DecodeBlock(64 + 256, 64, target_size=(h // 2, w // 2), cbam=False)
+        self.decoder0 = DecodeBlock(64, 64, target_size=(h, w), cbam=False)
+        # self.up_concat4 = UnetUp(512, 1024, 64, False, 2)
+        # self.up_concat3 = UnetUp(64, 512, 64, False, 2)
+        # self.up_concat2 = UnetUp(64, 256, 64, False, 2)
+        # self.up_concat1 = UnetUp(64, 64, 64, False, 2)
+        # self.decoder0 = init_weight(conv3x3(64, 64))
+        # self.upsample_add = ops.ResizeBilinear((h, w))
 
         # upsample
         self.upsample4 = ops.ResizeBilinear((h, w))
@@ -164,18 +160,11 @@ class UNET_SERESNEXT50(nn.Cell):
 
         self.concat = ms.ops.Concat(axis=1)
 
-        # deep supervision
-        self.deep4 = nn.SequentialCell(init_weight(conv1x1(64, 1)), nn.Sigmoid())
-        self.deep3 = nn.SequentialCell(init_weight(conv1x1(64, 1)), nn.Sigmoid())
-        self.deep2 = nn.SequentialCell(init_weight(conv1x1(64, 1)), nn.Sigmoid())
-        self.deep1 = nn.SequentialCell(init_weight(conv1x1(64, 1)), nn.Sigmoid())
-
         # final conv
         self.final_conv = nn.SequentialCell(
             init_weight(conv3x3(320, 64)),
             nn.ELU(),
-            init_weight(conv3x3(64, 1)),
-            nn.Sigmoid()
+            init_weight(conv3x3(64, 1))
         )
 
     def construct(self, inputs):
@@ -190,16 +179,16 @@ class UNET_SERESNEXT50(nn.Cell):
         y5 = self.center(x4)  # (*, 512, h/32, w/32)
 
         # decoder
-        # y4 = self.decoder4(cat((x4, y5)))
-        # y3 = self.decoder3(cat((x3, y4)))
-        # y2 = self.decoder2(cat((x2, y3)))
-        # y1 = self.decoder1(cat((x1, y2)))
-        # y0 = self.decoder0(y1)  # (*, 64, h, w)
-        y4 = self.up_concat4(y5, x3)
-        y3 = self.up_concat3(y4, x2)
-        y2 = self.up_concat2(y3, x1)
-        y1 = self.up_concat1(y2, x0)
-        y0 = self.upsample_add(self.decoder0(y1))
+        y4 = self.decoder4(self.concat((x4, y5)))
+        y3 = self.decoder3(self.concat((x3, y4)))
+        y2 = self.decoder2(self.concat((x2, y3)))
+        y1 = self.decoder1(self.concat((x1, y2)))
+        y0 = self.decoder0(y1)  # (*, 64, h, w)
+        # y4 = self.up_concat4(y5, x3)
+        # y3 = self.up_concat3(y4, x2)
+        # y2 = self.up_concat2(y3, x1)
+        # y1 = self.up_concat1(y2, x0)
+        # y0 = self.upsample_add(self.decoder0(y1))
 
         # hypercolumns
         y4 = self.upsample4(y4)
@@ -210,20 +199,9 @@ class UNET_SERESNEXT50(nn.Cell):
 
         logits = self.final_conv(hypercol)
 
-        if self.clfhead:
-            raise ValueError('Disabled clfhead in this project.')
-        else:
-            if self.deepsupervision:
-                s4 = self.deep4(y4)
-                s3 = self.deep3(y3)
-                s2 = self.deep2(y2)
-                s1 = self.deep1(y1)
-                logits_deeps = [s4, s3, s2, s1]
-                return logits, logits_deeps
-            else:
-                return logits
+        return logits
 
 
-def seresnext50_unet(resolution, deepsupervision, clfhead, clf_threshold, load_pretrained):
-    model = UNET_SERESNEXT50(resolution, deepsupervision, clfhead, clf_threshold, load_pretrained)
+def seresnext50_unet(resolution=(512, 512), load_pretrained=False):
+    model = UNET_SERESNEXT50(resolution, load_pretrained)
     return model

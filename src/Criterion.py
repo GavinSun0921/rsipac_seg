@@ -1,44 +1,22 @@
-import mindspore
 import mindspore.nn as nn
 import mindspore.ops.operations as P
 from mindspore import dtype as mstype, Tensor
 from mindspore.nn import Cell
-from mindspore.ops import functional as F2
 
 
-class BCE_DICE_LOSS(nn.LossBase):
+class BCE_DICE_LOSS(Cell):
     def __init__(self):
         super(BCE_DICE_LOSS, self).__init__()
+        self.sig = nn.Sigmoid()
         self.c1 = nn.BCELoss(reduction='mean')
         self.c2 = nn.DiceLoss()
 
     def construct(self, logits, labels):
+        logits = self.sig(logits)
         loss1 = self.c1(logits, labels)
         loss2 = self.c2(logits, labels)
         return loss1 + loss2
 
-
-class Criterion(nn.LossBase):
-    def __init__(self, deepsupervision, clfhead):
-        super(Criterion, self).__init__()
-        self.deepsupervision = deepsupervision
-        self.clfhead = clfhead
-        self.criterion = BCE_DICE_LOSS()
-
-    def construct(self, logits, labels):
-        if self.clfhead:
-            raise ValueError('Disabled clfhead in this project.')
-        else:
-            if self.deepsupervision:
-                logits_, logits_deeps = logits
-                loss = self.criterion(logits_, labels)
-                for logits_deep in logits_deeps:
-                    loss += self.criterion(logits_deep, labels)
-                return loss
-            else:
-                logits_ = logits
-                loss = self.criterion(logits_, labels)
-                return loss
 
 class CrossEntropyWithLogits(nn.LossBase):
     """

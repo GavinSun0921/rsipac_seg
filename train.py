@@ -11,15 +11,15 @@ from mindspore import nn, context
 from mindspore.nn import TrainOneStepCell
 from tqdm import tqdm
 
-from src.Criterion import Criterion, BCE_DICE_LOSS, CrossEntropyWithLogits
+from src.Criterion import BCE_DICE_LOSS, CrossEntropyWithLogits
 from src.RemoteSensingDataset import RSDataset, Mode
 from src.se_resnext50 import seresnext50_unet
 from src.testnet import UNet
 
 visual_flag = False
 
-# net_name = 'seresnext50_unet'
-net_name = 'unet'
+net_name = 'seresnext50_unet'
+# net_name = 'unet'
 
 base_size = 640
 crop_size = 512
@@ -30,6 +30,7 @@ prefix = net_name
 python_multiprocessing = True
 num_parallel_workers = 32
 eval_per_epoch = 0
+FixedLossScaleManager = 1024.0
 
 
 def calc_iou(target, prediction):
@@ -76,11 +77,6 @@ def trainNet(net, criterion, epochs, batch_size):
     valid_steps = dataset_valid.get_dataset_size()
     dataloader_valid = dataset_valid.create_tuple_iterator()
 
-    total_train_steps = train_steps * epochs
-    lr_iter = cosine_lr(0.0002, total_train_steps, total_train_steps)
-    params = net.trainable_params()
-    opt = nn.Adam(params=params, learning_rate=lr_iter)
-
     logger.info(f'''
 ==================================DATA=======================================
     Dataset:
@@ -96,11 +92,20 @@ def trainNet(net, criterion, epochs, batch_size):
 =============================================================================
         ''')
 
-    net_with_loss = nn.WithLossCell(backbone=net, loss_fn=criterion)
+    # net_with_loss = nn.WithLossCell(backbone=net, loss_fn=criterion)
+    #
+    # train_model = TrainOneStepCell(network=net_with_loss, optimizer=opt)
 
-    train_model = TrainOneStepCell(network=net_with_loss, optimizer=opt)
+    total_train_steps = train_steps * epochs
+    lr_iter = cosine_lr(0.0002, total_train_steps, total_train_steps)
+    params = net.trainable_params()
+    opt = nn.Adam(params=params, learning_rate=lr_iter, weight_decay=0.0005, loss_scale=FixedLossScaleManager)
 
-    eval_model = nn.WithEvalCell(network=net, loss_fn=criterion)
+    loss_scale_manager = ms.train.loss_scale_manager.FixedLossScaleManager(FixedLossScaleManager, False)
+    train_model = ms.build_train_network(network=net, optimizer=opt, loss_fn=criterion,
+                                         level='O3', boost_level='O2', loss_scale_manager=loss_scale_manager)
+
+    eval_model = nn.WithEvalCell(network=net, loss_fn=criterion, add_cast_fp32=True)
 
     logger.info(f'Begin training:')
 
@@ -112,8 +117,6 @@ def trainNet(net, criterion, epochs, batch_size):
         train_avg_loss = 0
         with tqdm(total=train_steps, desc=f'Epoch {epoch}/{epochs}', unit='batch') as train_pbar:
             for step, (imgs, masks) in enumerate(dataloader_train):
-                print(imgs.shape)
-                print(masks.shape)
                 train_loss = train_model(imgs, masks)
                 train_avg_loss += train_loss.asnumpy() / train_steps
 
@@ -128,9 +131,7 @@ def trainNet(net, criterion, epochs, batch_size):
             with tqdm(total=valid_steps, desc='Validation', unit='batch') as eval_pbar:
                 for idx, (imgs, masks) in enumerate(dataloader_valid):
                     valid_loss, preds, masks = eval_model(imgs, masks)
-                    if net_name == 'seresnext50_unet':
-                        if net.deepsupervision:
-                            preds = preds[0]
+
                     pred_buffer = preds.asnumpy().copy()
                     pred_buffer[pred_buffer >= 0.5] = 1
                     pred_buffer[pred_buffer < 0.5] = 0
@@ -179,9 +180,6 @@ def get_args():
     parser.add_argument('--epochs', default=200, type=int, help='Number of total epochs to train.')
     parser.add_argument('--batch_size', default=4, type=int, help='Number of datas in one batch.')
     parser.add_argument('--device_target', default='Ascend', type=str)
-    parser.add_argument('--deepsupervision', default=True, type=ast.literal_eval)
-    parser.add_argument('--clfhead', default=False, type=ast.literal_eval)
-    parser.add_argument('--clf_threshold', default=None, type=float)
     parser.add_argument('--load_pretrained', default=True, type=ast.literal_eval)
     parser.add_argument('--num_parallel_workers', default=32, type=int)
     parser.add_argument('--eval_per_epoch', default=0, type=int)
@@ -209,7 +207,7 @@ if __name__ == '__main__':
 
     args = get_args()
 
-    context.set_context(mode=context.PYNATIVE_MODE, device_target=args.device_target)  # GRAPH_MODE
+    context.set_context(mode=context.GRAPH_MODE, device_target=args.device_target)  # GRAPH_MODE
 
     if args.root:
         dir_root = args.root
@@ -223,18 +221,11 @@ if __name__ == '__main__':
     if net_name == 'seresnext50_unet':
         _net = seresnext50_unet(
             resolution=(crop_size, crop_size),
-            deepsupervision=args.deepsupervision,
-            clfhead=args.clfhead,
-            clf_threshold=args.clf_threshold,
             load_pretrained=args.load_pretrained
         )
-        _criterion = Criterion(deepsupervision=args.deepsupervision, clfhead=args.clfhead)
+        _criterion = BCE_DICE_LOSS()
     else:
         _net = UNet(3, 2)
-        # if args.load_pretrained:
-        #     param_dict = ms.load_checkpoint('pretrained/unet_medical_ascend_v170_isbi_official_cv_acc91.39.ckpt')
-        #     ms.load_param_into_net(_net, param_dict)
-        # _criterion = BCE_DICE_LOSS()
         _criterion = CrossEntropyWithLogits(2)
 
     if args.close_python_multiprocessing:
@@ -251,9 +242,6 @@ if __name__ == '__main__':
         dir_log     : {dir_log}
     
     net : {net_name}
-        deepsupervision     : {'Enabled' if args.deepsupervision else 'Disabled'}
-        clfhead             : {'Enabled' if args.clfhead else 'Disabled'}
-        clf_threshold       : {args.clf_threshold if args.clf_threshold is not None else 'Disabled'}
         pretrained weight   : {'Enabled' if args.load_pretrained else 'Disabled'}
     
     training config :
