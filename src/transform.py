@@ -56,9 +56,14 @@ class TransformPred:
     def __init__(self, crop_size, mean, std):
         self.LongestMaxSize = A.LongestMaxSize(crop_size)
 
+        # self.transforms = A.Compose([
+        #     A.PadIfNeeded(min_height=None, min_width=None,
+        #                   pad_height_divisor=64, pad_width_divisor=64,
+        #                   border_mode=cv2.BORDER_CONSTANT, position="top_left", value=0),
+        #     A.Normalize(mean=mean, std=std),
+        # ])
         self.transforms = A.Compose([
-            A.PadIfNeeded(min_height=None, min_width=None,
-                          pad_height_divisor=64, pad_width_divisor=64,
+            A.PadIfNeeded(min_height=crop_size, min_width=crop_size,
                           border_mode=cv2.BORDER_CONSTANT, position="top_left", value=0),
             A.Normalize(mean=mean, std=std),
         ])
@@ -66,6 +71,7 @@ class TransformPred:
     def __call__(self, image):
         resize_image = self.LongestMaxSize(image=image)['image']
         resize_shape = resize_image.shape[:2]
+        resize_shape = (np.int32(resize_shape[0]), np.int32(resize_shape[1]))
         augmented = self.transforms(image=resize_image)
         image = augmented['image']
         image = np.asarray(image, np.float32)

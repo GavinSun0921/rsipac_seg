@@ -2,19 +2,26 @@ import argparse
 import ast
 import logging
 import os.path
+import random
 
 import cv2
 import numpy as np
 import mindspore as ms
 import mindspore.dataset as ds
 from mindspore import nn, context
-from mindspore.nn import TrainOneStepCell
 from tqdm import tqdm
 
 from src.Criterion import BCE_DICE_LOSS, CrossEntropyWithLogits
 from src.RemoteSensingDataset import RSDataset, Mode
 from src.se_resnext50 import seresnext50_unet
 from src.testnet import UNet
+
+seed = 1
+
+np.random.seed(seed)
+random.seed(seed)
+ms.set_seed(seed)
+ds.config.set_seed(seed)
 
 visual_flag = False
 
@@ -103,7 +110,7 @@ def trainNet(net, criterion, epochs, batch_size):
 
     loss_scale_manager = ms.train.loss_scale_manager.FixedLossScaleManager(FixedLossScaleManager, False)
     train_model = ms.build_train_network(network=net, optimizer=opt, loss_fn=criterion,
-                                         level='O3', boost_level='O2', loss_scale_manager=loss_scale_manager)
+                                         level='O3', boost_level='O1', loss_scale_manager=loss_scale_manager)
 
     eval_model = nn.WithEvalCell(network=net, loss_fn=criterion, add_cast_fp32=True)
 

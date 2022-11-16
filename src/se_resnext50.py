@@ -4,7 +4,6 @@ from mindspore.common import dtype
 from mindspore.common.initializer import initializer, HeNormal, Normal, XavierUniform
 
 from src.senet_ms import se_resnext50_32x4d
-from src.unet_parts_modify import UnetUp
 
 
 def conv3x3(in_channel, out_channel):
@@ -91,7 +90,10 @@ class DecodeBlock(nn.Cell):
 
         self.bn1 = init_weight(nn.BatchNorm2d(in_channel))
         self.relu = nn.ReLU()
-        self.upsample = ops.ResizeBilinear(target_size)
+        self.upsample = nn.Conv2dTranspose(
+            in_channel, in_channel,
+            kernel_size=2, stride=2, pad_mode='same'
+        )
         self.conv3x3_1 = init_weight(conv3x3(in_channel, in_channel))
         self.bn2 = init_weight(nn.BatchNorm2d(in_channel))
         self.conv3x3_2 = init_weight(conv3x3(in_channel, out_channel))
@@ -153,10 +155,14 @@ class UNET_SERESNEXT50(nn.Cell):
         # self.upsample_add = ops.ResizeBilinear((h, w))
 
         # upsample
-        self.upsample4 = ops.ResizeBilinear((h, w))
-        self.upsample3 = ops.ResizeBilinear((h, w))
-        self.upsample2 = ops.ResizeBilinear((h, w))
-        self.upsample1 = ops.ResizeBilinear((h, w))
+        # self.upsample4 = ops.ResizeBilinear((h, w))
+        # self.upsample3 = ops.ResizeBilinear((h, w))
+        # self.upsample2 = ops.ResizeBilinear((h, w))
+        # self.upsample1 = ops.ResizeBilinear((h, w))
+        self.upsample4 = nn.Conv2dTranspose(64, 64, kernel_size=16, stride=16, pad_mode='same')
+        self.upsample3 = nn.Conv2dTranspose(64, 64, kernel_size=8, stride=8, pad_mode='same')
+        self.upsample2 = nn.Conv2dTranspose(64, 64, kernel_size=4, stride=4, pad_mode='same')
+        self.upsample1 = nn.Conv2dTranspose(64, 64, kernel_size=2, stride=2, pad_mode='same')
 
         self.concat = ms.ops.Concat(axis=1)
 

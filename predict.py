@@ -2,15 +2,12 @@ import logging
 
 import argparse
 
-import ast
 import os.path
 
 import cv2
 import mindspore as ms
 import mindspore.dataset as ds
 import numpy as np
-from mindspore import nn
-from mindspore.common import dtype
 from mindspore.dataset import context
 from tqdm import tqdm
 
@@ -25,10 +22,7 @@ dir_pred = './pred'
 dir_log = './logs'
 figsize = 1920
 python_multiprocessing = True
-num_parallel_workers = 32
-
-deepsupervision = False
-
+num_parallel_workers = 16
 
 def predictNet(net):
     dataset_predict_buffer = RSDataset(root=dir_root, mode=Mode.predict,
@@ -38,7 +32,8 @@ def predictNet(net):
         source=dataset_predict_buffer,
         column_names=['data', 'resize_shape', 'original_shape', 'filename'],
         shuffle=False, num_parallel_workers=num_parallel_workers,
-        python_multiprocessing=python_multiprocessing
+        python_multiprocessing=python_multiprocessing,
+        max_rowsize=60
     )
     dataset_predict = dataset_predict.batch(1)
     predict_steps = dataset_predict.get_dataset_size()
@@ -50,17 +45,14 @@ def predictNet(net):
             filename = filename[0].asnumpy()
             maskname = f'{filename}.png'
 
-            if deepsupervision:
-                pred, _ = net(img)
-            else:
-                pred = net(img)
+            pred = net(img)
 
             pred = pred.asnumpy()
             pred = pred[0, 0, :resize_shape[0], :resize_shape[1]]
             pred = cv2.resize(pred, (original_shape[1], original_shape[0]))
 
-            pred[pred >= 0.5] = 255
-            pred[pred < 0.5] = 0
+            pred[pred >= 0] = 255
+            pred[pred < 0] = 0
             pred = pred.astype(np.uint8)
             cv2.imwrite(f'{dir_pred}/{maskname}', pred)
 
@@ -70,15 +62,12 @@ def predictNet(net):
 def get_args():
     parser = argparse.ArgumentParser(description='Prediction')
 
-    parser.add_argument('--root', default='./datas', type=str)
+    parser.add_argument('--root', default=None, type=str)
     parser.add_argument('--device_target', default='Ascend', type=str)
-    parser.add_argument('--figsize', default=1920, type=int)
-    parser.add_argument('--deepsupervision', default=False, type=ast.literal_eval)
-    parser.add_argument('--clfhead', default=False, type=ast.literal_eval)
-    parser.add_argument('--clf_threshold', default=None, type=float)
-    parser.add_argument('--dir_pred', default='./pred', type=str)
+    parser.add_argument('--figsize', default=None, type=int)
+    parser.add_argument('--dir_pred', default=None, type=str)
     parser.add_argument('--load_weight', default=None, type=str)
-    parser.add_argument('--num_parallel_workers', default=32, type=int)
+    parser.add_argument('--num_parallel_workers', default=None, type=int)
     parser.add_argument('--close_python_multiprocessing', default=False, action='store_true')
 
     return parser.parse_args()
@@ -104,29 +93,23 @@ if __name__ == '__main__':
 
     context.set_context(mode=context.GRAPH_MODE, device_target=args.device_target)
 
-    if args.root:
+    if args.root is not None:
         dir_root = args.root
 
-    if args.dir_pred:
+    if args.dir_pred is not None:
         dir_pred = args.dir_pred
 
-    if args.num_parallel_workers:
+    if args.num_parallel_workers is not None:
         num_parallel_workers = args.num_parallel_workers
-
-    if args.deepsupervision:
-        deepsupervision = True
 
     if args.close_python_multiprocessing:
         python_multiprocessing = False
 
-    if args.figsize:
+    if args.figsize is not None:
         figsize = args.figsize
 
     _net = seresnext50_unet(
         resolution=(figsize, figsize),
-        deepsupervision=args.deepsupervision,
-        clfhead=args.clfhead,
-        clf_threshold=args.clf_threshold,
         load_pretrained=False
     )
 
@@ -147,9 +130,6 @@ if __name__ == '__main__':
         dir_log     : {dir_log}  
 
     net : {net_name}
-        deepsupervision     : {'Enabled' if deepsupervision else 'Disabled'}
-        clfhead             : {'Enabled' if args.clfhead else 'Disabled'}
-        clf_threshold       : {args.clf_threshold if args.clf_threshold is not None else 'Disabled'}
         weight              : {dir_weight}
 
     predict config :
